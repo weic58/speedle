@@ -70,12 +70,25 @@
         #settings-modal.show { opacity: 1; pointer-events: auto; }
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
         
-        .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
         .len-btn, .kb-size-btn, .time-btn { 
-            flex: 1; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
+            flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
+            min-width: 65px;
         }
         .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
+        
+        /* 新增：圖形化固定格子選擇器 CSS */
+        .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .pattern-box {
+            width: 45px; height: 45px; border: 2px solid var(--border-color);
+            border-radius: 8px; cursor: pointer; background-color: var(--bg-color);
+            transition: 0.2s;
+        }
+        .pattern-box.active {
+            background-color: var(--wordle-green); border-color: var(--wordle-green);
+        }
+
         .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
 
         /* --- 遊戲儀表板 UI --- */
@@ -121,7 +134,8 @@
         #keyboard { 
             width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 6px; 
             margin-top: auto; 
-            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px); 
+            /* 確認修改點 1：鍵盤底部距離為 90px，徹底防誤觸 */
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px); 
             z-index: 2; flex-shrink: 0; 
         }
         .kb-row { display: flex; justify-content: center; gap: 6px; }
@@ -143,10 +157,8 @@
         #big-countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20rem; font-weight: bold; color: var(--error-color); opacity: 0; pointer-events: none; z-index: 999; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; opacity: 0; pointer-events: none; transition: 0.3s; }
         .overlay.show { opacity: 1; pointer-events: auto; }
-        
         .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: var(--text-color); text-align: center; }
         .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: var(--text-color); }
-        
         .btn-group { display: flex; gap: 20px; }
         .btn-group button { font-size: 1.2rem; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
@@ -208,6 +220,9 @@
                 <button class="len-btn" data-len="5">5</button>
                 <button class="len-btn" data-len="6">6</button>
             </div>
+
+            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">點亮要固定的字母位置:</label>
+            <div id="pattern-selector" class="pattern-selector"></div>
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">初始時間 (秒):</label>
             <div class="length-selector">
@@ -286,9 +301,11 @@
         let wordSet = new Set(); 
         
         let gameMode = 'level', targetLength = 4, baseTime = 60;
+        let fixPattern = [true, false, false, true]; // 全新的圖形化位置記錄陣列
+        
         let gameTime = 60, timeLeft = 0, score = 0, level = 1, wordsInCurrentLevel = 0;
-        let startLetter = "", endLetter = "";
-        let currentMiddleInput = "";
+        let puzzlePattern = []; 
+        let userInput = ""; 
         let submittedWords = new Set();
         let wrongAttempts = 0;
         let isGameOver = false, isPaused = false, isAnimating = false, timerInterval, idleTimer;
@@ -308,7 +325,6 @@
 
         async function fetchDictionary() {
             try {
-                // 修改點 2：換回最嚴謹的 1萬字核心字典，杜絕音譯怪字
                 const res = await fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt');
                 const text = await res.text();
                 const rawWords = text.split('\n').map(w => w.trim().toUpperCase());
@@ -323,6 +339,7 @@
 
                 document.getElementById('loading-msg').style.display = 'none';
                 updateHighScoresUI();
+                renderPatternSelector(); // 初始化畫出格子
                 document.getElementById('mode-cards').classList.add('ready');
             } catch (error) { document.getElementById('loading-msg').textContent = "字典載入失敗，請重整"; }
         }
@@ -372,12 +389,41 @@
             forceNextPuzzle();
         }
 
+        // 修改點 2：渲染圖形化的點亮格子
+        function renderPatternSelector() {
+            const container = document.getElementById('pattern-selector');
+            container.innerHTML = '';
+            for (let i = 0; i < targetLength; i++) {
+                const box = document.createElement('div');
+                box.className = 'pattern-box' + (fixPattern[i] ? ' active' : '');
+                box.addEventListener('click', () => {
+                    let newPattern = [...fixPattern];
+                    newPattern[i] = !newPattern[i];
+                    let fixedCount = newPattern.filter(x => x).length;
+                    
+                    // 防呆：強制至少要亮1格，且至少要留1個暗格給玩家打字
+                    if (fixedCount > 0 && fixedCount < targetLength) {
+                        fixPattern[i] = !fixPattern[i];
+                        renderPatternSelector();
+                    }
+                });
+                container.appendChild(box);
+            }
+        }
+
         document.querySelectorAll('.len-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.len-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 targetLength = parseInt(e.target.getAttribute('data-len'));
-                updateHighScoresUI();
+                
+                // 動態產生對應長度的格子，3字模式預設只亮第1格
+                fixPattern = new Array(targetLength).fill(false);
+                fixPattern[0] = true;
+                if (targetLength > 3) fixPattern[targetLength - 1] = true; 
+                
+                renderPatternSelector();
+                updateHighScoresUI(); 
             });
         });
 
@@ -445,29 +491,44 @@
             document.getElementById('plus-one').classList.remove('show');
 
             const words = cloudDict[targetLength];
-            let pairMap = {};
+            let map = {};
+            
+            // 根據玩家點亮的圖形格子去抓取對應位置的字母當作 key
             words.forEach(w => {
-                let pair = w[0] + w[targetLength - 1];
-                if (!pairMap[pair]) pairMap[pair] = [];
-                pairMap[pair].push(w);
+                let key = "";
+                for(let i=0; i<targetLength; i++) {
+                    if(fixPattern[i]) key += w[i];
+                }
+                if (!map[key]) map[key] = [];
+                map[key].push(w);
             });
 
-            let minRequired = targetLength >= 5 ? 8 : 12; 
-            let validPairs = Object.keys(pairMap).filter(pair => pairMap[pair].length >= minRequired && pair !== lastPair);
-            if (validPairs.length === 0) validPairs = Object.keys(pairMap).filter(pair => pair !== lastPair);
-            if (validPairs.length === 0) validPairs = Object.keys(pairMap);
+            let blanksCount = fixPattern.filter(p => !p).length;
+            let minRequired = blanksCount === 1 ? 3 : 5; 
             
-            let randomPair = validPairs[Math.floor(Math.random() * validPairs.length)];
-            lastPair = randomPair;
-            startLetter = randomPair[0]; endLetter = randomPair[1];
+            let validKeys = Object.keys(map).filter(k => map[k].length >= minRequired && k !== lastPair);
+            if (validKeys.length === 0) validKeys = Object.keys(map).filter(k => k !== lastPair);
+            if (validKeys.length === 0) validKeys = Object.keys(map);
             
-            currentMiddleInput = ""; submittedWords.clear();
+            let randomKey = validKeys[Math.floor(Math.random() * validKeys.length)];
+            lastPair = randomKey;
+            
+            // 把抽到的字母填入陣列對應發亮的格子中
+            puzzlePattern = new Array(targetLength).fill(null);
+            let kIdx = 0;
+            for(let i=0; i<targetLength; i++) {
+                if(fixPattern[i]) {
+                    puzzlePattern[i] = randomKey[kIdx];
+                    kIdx++;
+                }
+            }
+            
+            userInput = ""; 
+            submittedWords.clear();
             currentHintWord = null; revealedHints = {};
             wrongAttempts = 0;
             
-            // 修改點 1 & 3：換題時清空上方提示文字，但不清空底下打過的單字紀錄！
             document.getElementById('message').textContent = ""; 
-            
             document.getElementById('hint-btn').style.display = 'inline-block';
             resetIdleTimer();
         }
@@ -482,8 +543,10 @@
             for (let i = 0; i < targetLength; i++) {
                 const tile = document.createElement('div');
                 tile.classList.add('tile'); tile.id = `tile-${i}`;
-                if (i === 0) { tile.textContent = startLetter; tile.classList.add('fixed'); } 
-                else if (i === targetLength - 1) { tile.textContent = endLetter; tile.classList.add('fixed'); }
+                if (puzzlePattern[i] !== null) { 
+                    tile.textContent = puzzlePattern[i]; 
+                    tile.classList.add('fixed'); 
+                } 
                 boardEl.appendChild(tile);
             }
         }
@@ -494,10 +557,7 @@
             lastPair = "";
             
             document.getElementById('score').textContent = score;
-            
-            // 只有在按「開始新遊戲」的時候，才會清空歷史紀錄
             document.getElementById('word-list').innerHTML = ""; 
-            
             document.getElementById('message').textContent = "";
             document.getElementById('pause-overlay').classList.remove('show');
             document.getElementById('game-over').classList.remove('show');
@@ -552,7 +612,12 @@
         document.getElementById('hint-zh-btn').addEventListener('click', async () => {
             if (isGameOver || isPaused || isAnimating) return;
 
-            let possibleWords = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            let possibleWords = cloudDict[targetLength].filter(w => {
+                for(let i=0; i<targetLength; i++) {
+                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
+                }
+                return !submittedWords.has(w);
+            });
             if (possibleWords.length === 0) { showMessage("這題已經沒有單字可以提示了！"); return; }
 
             if (!currentHintWord || submittedWords.has(currentHintWord)) {
@@ -582,7 +647,12 @@
         document.getElementById('hint-btn').addEventListener('click', () => {
             if (isGameOver || isPaused || isAnimating) return;
 
-            let possibleWords = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            let possibleWords = cloudDict[targetLength].filter(w => {
+                for(let i=0; i<targetLength; i++) {
+                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
+                }
+                return !submittedWords.has(w);
+            });
             if (possibleWords.length === 0) {
                 showMessage("這題已經沒有單字可以提示了！"); return;
             }
@@ -593,8 +663,8 @@
             }
 
             let unrevealed = [];
-            for (let i = 1; i < targetLength - 1; i++) {
-                if (!revealedHints[i]) unrevealed.push(i);
+            for (let i = 0; i < targetLength; i++) {
+                if (puzzlePattern[i] === null && !revealedHints[i]) unrevealed.push(i);
             }
             
             if (unrevealed.length === 0) {
@@ -617,32 +687,38 @@
         async function handleInput(e) {
             if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
             resetIdleTimer(); 
-            const middleLength = targetLength - 2;
+            
+            let blanksCount = puzzlePattern.filter(p => p === null).length;
+            
             if (e.key === 'Backspace') {
-                currentMiddleInput = currentMiddleInput.slice(0, -1); updateBoard();
+                userInput = userInput.slice(0, -1); updateBoard();
             } else if (e.key === 'Enter') {
                 await checkWord();
-            } else if (/^[a-zA-Z]$/.test(e.key) && currentMiddleInput.length < middleLength) {
-                currentMiddleInput += e.key.toUpperCase(); updateBoard();
+            } else if (/^[a-zA-Z]$/.test(e.key) && userInput.length < blanksCount) {
+                userInput += e.key.toUpperCase(); updateBoard();
             }
         }
 
         function updateBoard() {
-            for (let i = 0; i < targetLength - 2; i++) {
-                const actualIndex = i + 1;
-                const tile = document.getElementById(`tile-${actualIndex}`);
+            let uIdx = 0;
+            for (let i = 0; i < targetLength; i++) {
+                const tile = document.getElementById(`tile-${i}`);
                 tile.className = 'tile'; 
                 
-                if (i < currentMiddleInput.length) {
-                    tile.textContent = currentMiddleInput[i]; 
-                    tile.classList.add('filled');
+                if (puzzlePattern[i] !== null) {
+                    tile.textContent = puzzlePattern[i];
+                    tile.classList.add('fixed');
                 } else {
-                    if (revealedHints[actualIndex]) {
-                        tile.textContent = revealedHints[actualIndex];
+                    if (uIdx < userInput.length) {
+                        tile.textContent = userInput[uIdx]; 
+                        tile.classList.add('filled');
+                    } else if (revealedHints[i]) {
+                        tile.textContent = revealedHints[i];
                         tile.classList.add('hinted');
                     } else {
                         tile.textContent = '';
                     }
+                    uIdx++;
                 }
             }
         }
@@ -651,8 +727,8 @@
             playBeep(200, 'sawtooth', 0.15);
             const b = document.getElementById('board'); 
             b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
-            for (let i = 1; i < targetLength - 1; i++) {
-                document.getElementById(`tile-${i}`).classList.add('error');
+            for (let i = 0; i < targetLength; i++) {
+                if (puzzlePattern[i] === null) document.getElementById(`tile-${i}`).classList.add('error');
             }
             
             wrongAttempts++;
@@ -661,13 +737,23 @@
             }
 
             setTimeout(() => {
-                for (let i = 1; i < targetLength - 1; i++) document.getElementById(`tile-${i}`).classList.remove('error');
+                for (let i = 0; i < targetLength; i++) {
+                    if (puzzlePattern[i] === null) document.getElementById(`tile-${i}`).classList.remove('error');
+                }
             }, 400);
         }
 
         async function checkWord() {
-            if (currentMiddleInput.length !== targetLength - 2) { showMessage("字數不足！"); shakeError(); return; }
-            const fullWord = startLetter + currentMiddleInput + endLetter;
+            let blanksCount = puzzlePattern.filter(p => p === null).length;
+            if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
+            
+            let fullWord = "";
+            let uIdx = 0;
+            for (let i = 0; i < targetLength; i++) {
+                if (puzzlePattern[i] !== null) fullWord += puzzlePattern[i];
+                else fullWord += userInput[uIdx++];
+            }
+            
             if (submittedWords.has(fullWord)) { showMessage("剛剛拼過這個字囉！"); shakeError(); return; }
 
             let isValid = wordSet.has(fullWord);
@@ -703,7 +789,12 @@
                 document.getElementById('hint-btn').style.display = 'inline-block';
             }
 
-            let possibleRemaining = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            let possibleRemaining = cloudDict[targetLength].filter(w => {
+                for(let i=0; i<targetLength; i++) {
+                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
+                }
+                return !submittedWords.has(w);
+            });
             let forceNext = (possibleRemaining.length === 0);
 
             setTimeout(() => {
@@ -714,7 +805,7 @@
                         showMessage("太神啦！這題被你突破了！時間 +5 秒"); forceNextPuzzle(); 
                     } else {
                         showMessage("得分！時間 +5 秒！請繼續突破題庫");
-                        currentMiddleInput = ""; updateBoard(); 
+                        userInput = ""; updateBoard(); 
                     }
                 } else if (gameMode === 'level') {
                     wordsInCurrentLevel++;
@@ -725,14 +816,14 @@
                         forceNextPuzzle();
                     } else {
                         showMessage(`得分！請繼續輸入不同單字 (${wordsInCurrentLevel}/3)`);
-                        currentMiddleInput = ""; updateBoard(); 
+                        userInput = ""; updateBoard(); 
                     }
                 } else {
                     if(forceNext) {
                         showMessage("太神啦！這個題目的單字全被你拼出來了！自動換題！"); forceNextPuzzle();
                     } else {
                         showMessage("得分！請繼續突破題庫");
-                        currentMiddleInput = ""; updateBoard(); 
+                        userInput = ""; updateBoard(); 
                     }
                 }
                 isAnimating = false;
@@ -775,7 +866,12 @@
         }
 
         function appendMissedWords() {
-            let possibleRemaining = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            let possibleRemaining = cloudDict[targetLength].filter(w => {
+                for(let i=0; i<targetLength; i++) {
+                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
+                }
+                return !submittedWords.has(w);
+            });
             if (possibleRemaining.length === 0) return;
 
             let shuffled = possibleRemaining.sort(() => 0.5 - Math.random());
