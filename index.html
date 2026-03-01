@@ -70,7 +70,6 @@
         #settings-modal.show { opacity: 1; pointer-events: auto; }
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
         
-        /* --- 按鈕式設定選擇 (統一的高亮樣式) --- */
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .len-btn, .kb-size-btn, .time-btn { 
             flex: 1; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
@@ -122,7 +121,8 @@
         #keyboard { 
             width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 6px; 
             margin-top: auto; 
-            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px); 
+            /* 修改點 3：鍵盤底部距離 60px */
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px); 
             z-index: 2; flex-shrink: 0; 
         }
         .kb-row { display: flex; justify-content: center; gap: 6px; }
@@ -144,8 +144,11 @@
         #big-countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20rem; font-weight: bold; color: var(--error-color); opacity: 0; pointer-events: none; z-index: 999; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; opacity: 0; pointer-events: none; transition: 0.3s; }
         .overlay.show { opacity: 1; pointer-events: auto; }
-        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: white; text-align: center; }
-        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: #ddd; }
+        
+        /* 修改點 5：讓亮色模式時的字也能看見 */
+        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: var(--text-color); text-align: center; }
+        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: var(--text-color); }
+        
         .btn-group { display: flex; gap: 20px; }
         .btn-group button { font-size: 1.2rem; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
@@ -163,6 +166,7 @@
     <header>
         <h1 onclick="quitToHome()" title="回首頁">SPEEDLE</h1>
         <div class="header-controls">
+            <button id="hint-zh-btn" class="icon-btn" title="中文提示" style="display: none;">📖</button>
             <button id="hint-btn" class="icon-btn" title="給個提示" style="display: none;">💡</button>
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
@@ -294,8 +298,8 @@
         
         let currentHintWord = null;
         let revealedHints = {};
+        let lastPair = ""; // 修改點 6：防重複機制
 
-        // 升級儲存機制以支援長度分類，舊版將被重置以防崩潰
         let highScores = JSON.parse(localStorage.getItem('speedle_hs_v2'));
         if (!highScores) {
             highScores = {
@@ -374,7 +378,7 @@
                 document.querySelectorAll('.len-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 targetLength = parseInt(e.target.getAttribute('data-len'));
-                updateHighScoresUI(); // 即時更新對應字數的最高分
+                updateHighScoresUI();
             });
         });
 
@@ -421,10 +425,10 @@
             
             document.getElementById('settings-btn').style.display = 'inline-block';
             document.getElementById('hint-btn').style.display = 'none';
+            document.getElementById('hint-zh-btn').style.display = 'none';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('restart-btn').style.display = 'none'; 
 
-            // 還原鍵盤與按鈕
             document.getElementById('keyboard').style.display = 'flex';
             document.getElementById('skip-btn').textContent = "⏭️ 換個題目";
             document.getElementById('skip-btn').onclick = forceNextPuzzle;
@@ -439,6 +443,9 @@
         }
 
         function generatePuzzle() {
+            // 修改點 4：把 +1 分殘留動畫徹底清除
+            document.getElementById('plus-one').classList.remove('show');
+
             const words = cloudDict[targetLength];
             let pairMap = {};
             words.forEach(w => {
@@ -447,16 +454,22 @@
                 pairMap[pair].push(w);
             });
 
-            let minRequired = 5; 
-            let validPairs = Object.keys(pairMap).filter(pair => pairMap[pair].length >= minRequired);
+            // 修改點 6：過濾冷門怪字，要求解答數量夠多，並且不能跟上一題重複
+            let minRequired = targetLength >= 5 ? 8 : 12; 
+            let validPairs = Object.keys(pairMap).filter(pair => pairMap[pair].length >= minRequired && pair !== lastPair);
+            if (validPairs.length === 0) validPairs = Object.keys(pairMap).filter(pair => pair !== lastPair);
             if (validPairs.length === 0) validPairs = Object.keys(pairMap);
             
             let randomPair = validPairs[Math.floor(Math.random() * validPairs.length)];
+            lastPair = randomPair;
             startLetter = randomPair[0]; endLetter = randomPair[1];
             
             currentMiddleInput = ""; submittedWords.clear();
             currentHintWord = null; revealedHints = {};
             wrongAttempts = 0;
+            
+            // 恢復提示按鈕
+            document.getElementById('hint-btn').style.display = 'inline-block';
             resetIdleTimer();
         }
 
@@ -479,6 +492,7 @@
         function startGame(mode) {
             initAudio(); gameMode = mode; 
             score = 0; level = 1; wordsInCurrentLevel = 0; isGameOver = false; isPaused = false;
+            lastPair = "";
             
             document.getElementById('score').textContent = score;
             document.getElementById('word-list').innerHTML = ""; 
@@ -488,6 +502,7 @@
 
             document.getElementById('settings-btn').style.display = 'none';
             document.getElementById('hint-btn').style.display = 'inline-block';
+            document.getElementById('hint-zh-btn').style.display = 'inline-block'; // 顯示中文提示按鈕
             document.getElementById('restart-btn').style.display = 'inline-block'; 
             document.getElementById('pause-btn').style.display = mode === 'practice' ? 'none' : 'inline-block';
             
@@ -532,6 +547,38 @@
             }
         }
 
+        // 修改點 1：中文提示按鈕邏輯
+        document.getElementById('hint-zh-btn').addEventListener('click', async () => {
+            if (isGameOver || isPaused || isAnimating) return;
+
+            let possibleWords = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            if (possibleWords.length === 0) { showMessage("這題已經沒有單字可以提示了！"); return; }
+
+            if (!currentHintWord || submittedWords.has(currentHintWord)) {
+                currentHintWord = possibleWords[Math.floor(Math.random() * possibleWords.length)];
+                revealedHints = {}; updateBoard();
+            }
+
+            showMessage("查詢中文提示中...");
+            let wordToTranslate = currentHintWord;
+            
+            if (TRANSLATION_OVERRIDES[wordToTranslate]) {
+                showMessage(`中文提示: ${TRANSLATION_OVERRIDES[wordToTranslate]}`);
+            } else {
+                try {
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${wordToTranslate}`);
+                    const data = await res.json(); 
+                    if (currentHintWord === wordToTranslate) {
+                        showMessage(`中文提示: ${data[0][0][0]}`);
+                    }
+                } catch { 
+                    showMessage("中文提示查詢失敗，請重試"); 
+                }
+            }
+            playBeep(1000, 'triangle', 0.1);
+        });
+
+        // 字母提示邏輯
         document.getElementById('hint-btn').addEventListener('click', () => {
             if (isGameOver || isPaused || isAnimating) return;
 
@@ -551,12 +598,18 @@
             }
             
             if (unrevealed.length === 0) {
-                showMessage("這個單字的所有字母都提示完啦！"); return;
+                showMessage("字母提示已全開！請輸入並送出");
+                document.getElementById('hint-btn').style.display = 'none';
+                return;
             }
 
             let pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
             revealedHints[pick] = currentHintWord[pick];
             
+            if (unrevealed.length === 1) {
+                document.getElementById('hint-btn').style.display = 'none';
+            }
+
             updateBoard();
             playBeep(1000, 'triangle', 0.1);
         });
@@ -644,6 +697,13 @@
             const plusOne = document.getElementById('plus-one');
             plusOne.classList.remove('show'); void plusOne.offsetWidth; plusOne.classList.add('show');
             
+            // 修改點 2：當玩家確實拼出提示字時，才將提示清除 (格子裡的黃字就不會留存)
+            if (word === currentHintWord) {
+                currentHintWord = null;
+                revealedHints = {};
+                document.getElementById('hint-btn').style.display = 'inline-block';
+            }
+
             let possibleRemaining = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
             let forceNext = (possibleRemaining.length === 0);
 
