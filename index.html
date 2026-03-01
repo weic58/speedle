@@ -2,7 +2,7 @@
 <html lang="zh-TW" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Speedle - 極速拼字</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23538d4e'/><text x='50' y='72' font-size='70' fill='white' text-anchor='middle' font-family='Arial, sans-serif' font-weight='bold'>S</text></svg>">
     <style>
@@ -29,10 +29,13 @@
             transition: 0.3s; overflow: hidden; position: relative;
         }
 
+        /* 修改點 3：全域防止按鈕雙擊放大 */
+        button { touch-action: manipulation; }
+
         header {
             width: 100%; max-width: 500px; display: flex; justify-content: space-between; 
             align-items: center; border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px; margin-bottom: 20px; z-index: 5;
+            padding-bottom: 10px; margin-bottom: 20px; z-index: 5; flex-shrink: 0;
         }
         h1 { margin: 0; font-size: 2.2rem; letter-spacing: 2px; cursor: pointer; transition: 0.2s; }
         h1:hover { color: var(--wordle-green); }
@@ -40,11 +43,12 @@
         .icon-btn { background: none; border: none; color: var(--text-color); font-size: 1.4rem; cursor: pointer; transition: 0.2s; padding: 5px; }
         .icon-btn:hover { transform: scale(1.15); }
 
-        .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 500px; z-index: 2; }
+        /* 修改點 2：讓遊戲畫面佔滿剩餘高度，方便把鍵盤擠到底部 */
+        .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 500px; z-index: 2; height: 100%; }
         .screen.active { display: flex; }
 
         /* --- 美化首頁 --- */
-        #setup-screen { gap: 15px; margin-top: 10px; width: 100%; }
+        #setup-screen { gap: 15px; margin-top: 10px; width: 100%; height: auto; }
         .loading-text { font-size: 1.2rem; color: var(--accent-color); font-weight: bold; margin-bottom: 10px; }
         .mode-cards { display: flex; flex-direction: column; gap: 15px; width: 100%; opacity: 0; pointer-events: none; transition: 0.5s; }
         .mode-cards.ready { opacity: 1; pointer-events: auto; }
@@ -68,7 +72,7 @@
         #settings-modal.show { opacity: 1; pointer-events: auto; }
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
         
-        /* --- 按鈕式長度選擇 --- */
+        /* --- 按鈕式設定選擇 --- */
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .len-btn { 
             flex: 1; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
@@ -78,7 +82,7 @@
         .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
 
         /* --- 遊戲儀表板 UI --- */
-        #game-info { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; }
+        #game-info { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; flex-shrink: 0; }
         .mode-badge { font-size: 1.1rem; color: var(--text-color); opacity: 0.8; }
         .stats-group { display: flex; gap: 10px; }
         .pill { padding: 8px 16px; border-radius: 25px; font-size: 1.2rem; display: flex; align-items: center; gap: 5px; }
@@ -86,7 +90,7 @@
         .score-pill { background-color: var(--accent-color); color: white; box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3); }
 
         /* --- 遊戲區塊 --- */
-        #board-container { position: relative; margin-bottom: 10px; }
+        #board-container { position: relative; margin-bottom: 10px; flex-shrink: 0; }
         #board { display: flex; gap: 8px; position: relative; z-index: 2; transition: 0.3s; }
         .tile {
             width: 60px; height: 60px; border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center;
@@ -102,19 +106,44 @@
         .plus-one { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--wordle-green); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
         .plus-one.show { animation: floatUp 0.8s ease-out forwards; }
 
-        #message { height: 20px; font-weight: bold; color: var(--error-color); margin-bottom: 10px; z-index: 2; }
+        #message { height: 20px; font-weight: bold; color: var(--error-color); margin-bottom: 10px; z-index: 2; flex-shrink: 0; }
         
-        #skip-btn { display: none; margin-bottom: 10px; padding: 8px 20px; background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-weight: bold; }
-        #pass-btn { display: none; margin-bottom: 10px; padding: 8px 20px; background-color: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; animation: fadein 0.3s; }
+        #skip-btn { display: none; margin-bottom: 10px; padding: 8px 20px; background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; font-weight: bold; flex-shrink: 0; }
+        #pass-btn { display: none; margin-bottom: 10px; padding: 8px 20px; background-color: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; animation: fadein 0.3s; flex-shrink: 0; }
 
-        /* --- 單字歷史列表 --- */
-        #word-list { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 35vh; padding-right: 5px; z-index: 2; }
-        .submitted-item { display: flex; align-items: center; gap: 15px; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; }
+        /* 修改點 2：單字歷史列表改為彈性撐滿剩餘空間，讓鍵盤可以固定在底部 */
+        #word-list { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; z-index: 2; flex-grow: 1; max-height: none; margin-bottom: 10px; }
+        .submitted-item { display: flex; align-items: center; gap: 15px; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; flex-shrink: 0; }
         .mini-board { display: flex; gap: 3px; flex-shrink: 0; }
         .mini-tile { width: 25px; height: 25px; background-color: var(--wordle-green); color: white; display: flex; justify-content: center; align-items: center; font-size: 1rem; font-weight: bold; border-radius: 2px; }
         .definition { font-size: 1rem; color: var(--def-color); flex-grow: 1; word-break: break-word; }
-        .yahoo-link { color: var(--accent-color); text-decoration: none; font-size: 0.85rem; margin-left: 5px; background: rgba(74,144,226,0.1); padding: 2px 6px; border-radius: 4px; }
+        .yahoo-link { color: var(--accent-color); text-decoration: none; font-size: 0.85rem; margin-left: 5px; background: rgba(74,144,226,0.1); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
         .yahoo-link:hover { text-decoration: underline; }
+
+        /* --- 手機虛擬鍵盤 (修改點 1 & 2：位置固定底部 & 大小類別) --- */
+        #keyboard { 
+            width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 6px; 
+            margin-top: auto; /* 靠這行把鍵盤推到畫面最下面 */
+            padding-bottom: max(10px, env(safe-area-inset-bottom)); /* 避開 iPhone 底線 */
+            z-index: 2; flex-shrink: 0; 
+        }
+        .kb-row { display: flex; justify-content: center; gap: 6px; }
+        .kb-key {
+            background-color: var(--filled-border); color: white; border: none;
+            border-radius: 4px; flex: 1; max-width: 40px; font-size: 1.2rem;
+            font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            height: 50px; /* 預設為中等大小 */
+            transition: 0.2s;
+        }
+        [data-theme="light"] .kb-key { color: var(--text-color); }
+        .kb-key.wide { max-width: 65px; font-size: 1rem; }
+        .kb-key:active { transform: scale(0.95); opacity: 0.8; }
+
+        /* 修改點 1：鍵盤大小 CSS 變體 */
+        #keyboard.kb-sm .kb-key { height: 40px; font-size: 1rem; }
+        #keyboard.kb-md .kb-key { height: 50px; font-size: 1.2rem; }
+        #keyboard.kb-lg .kb-key { height: 60px; font-size: 1.4rem; }
 
         #big-countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20rem; font-weight: bold; color: var(--error-color); opacity: 0; pointer-events: none; z-index: 999; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; opacity: 0; pointer-events: none; transition: 0.3s; }
@@ -131,19 +160,6 @@
         @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
         .pulse { animation: pulseAnim 1s ease-out; }
         @keyframes pulseAnim { 0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.5); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
-        /* --- 手機虛擬鍵盤 --- */
-        #keyboard { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 10px; z-index: 2; }
-        .kb-row { display: flex; justify-content: center; gap: 6px; }
-        .kb-key {
-            background-color: var(--filled-border); color: white; border: none;
-            border-radius: 4px; height: 50px; flex: 1; max-width: 40px; font-size: 1.2rem;
-            font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            user-select: none; /* 防止手機連點時反白文字 */
-            -webkit-tap-highlight-color: transparent;
-        }
-        [data-theme="light"] .kb-key { color: var(--text-color); }
-        .kb-key.wide { max-width: 65px; font-size: 1rem; }
-        .kb-key:active { transform: scale(0.95); opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -186,6 +202,7 @@
     <div id="settings-modal">
         <div class="settings-box">
             <h2>遊戲設定</h2>
+            
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">單字長度:</label>
             <div class="length-selector">
                 <button class="len-btn" data-len="3">3字</button>
@@ -193,6 +210,14 @@
                 <button class="len-btn" data-len="5">5字</button>
                 <button class="len-btn" data-len="6">6字</button>
             </div>
+
+            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">鍵盤大小:</label>
+            <div class="length-selector" id="kb-size-selector">
+                <button class="kb-size-btn" data-size="kb-sm">小</button>
+                <button class="kb-size-btn active" data-size="kb-md">中</button>
+                <button class="kb-size-btn" data-size="kb-lg">大</button>
+            </div>
+
             <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('show')">完成</button>
         </div>
     </div>
@@ -216,7 +241,8 @@
 
         <div id="message"></div>
         <div id="word-list"></div>
-        <div id="keyboard">
+
+        <div id="keyboard" class="kb-md">
             <div class="kb-row">
                 <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button><button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button><button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button><button class="kb-key">P</button>
             </div>
@@ -246,6 +272,11 @@
     </div>
 
     <script>
+        // 修改點 4：專屬翻譯覆蓋字典 (加入你發現的怪異翻譯)
+        const TRANSLATION_OVERRIDES = {
+            "WOKE": "覺醒的; 醒來(wake過去式)",
+        };
+
         let cloudDict = { 3: [], 4: [], 5: [], 6: [] }; 
         let wordSet = new Set(); 
         
@@ -328,6 +359,16 @@
             });
         });
 
+        // 修改點 1：鍵盤大小按鈕邏輯
+        document.querySelectorAll('.kb-size-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.kb-size-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const size = e.target.getAttribute('data-size');
+                document.getElementById('keyboard').className = size;
+            });
+        });
+
         document.getElementById('theme-btn').addEventListener('click', () => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
         document.getElementById('mute-btn').addEventListener('click', (e) => { isMuted = !isMuted; e.target.textContent = isMuted ? '🔇' : '🔊'; });
         document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.add('show'); });
@@ -335,6 +376,16 @@
         document.getElementById('restart-btn').addEventListener('click', () => { startGame(gameMode); });
         
         document.addEventListener('keydown', handleInput);
+
+        // 綁定虛擬鍵盤事件
+        document.querySelectorAll('.kb-key').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                let keyText = e.target.textContent;
+                if (keyText === 'ENTER') { handleInput({ key: 'Enter' }); } 
+                else if (keyText === '⌫') { handleInput({ key: 'Backspace' }); } 
+                else { handleInput({ key: keyText }); }
+            });
+        });
 
         function quitToHome() {
             clearInterval(timerInterval); clearTimeout(idleTimer); isGameOver = true;
@@ -603,10 +654,15 @@
 
             itemDiv.appendChild(miniBoard); itemDiv.appendChild(defSpan); itemDiv.appendChild(yahooLink); list.prepend(itemDiv);
 
-            try {
-                const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${word}`);
-                const data = await res.json(); defSpan.textContent = data[0][0][0];
-            } catch { defSpan.textContent = "(翻譯異常)"; }
+            // 修改點 4：先檢查專屬翻譯字典
+            if (TRANSLATION_OVERRIDES[word]) {
+                defSpan.textContent = TRANSLATION_OVERRIDES[word];
+            } else {
+                try {
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${word}`);
+                    const data = await res.json(); defSpan.textContent = data[0][0][0];
+                } catch { defSpan.textContent = "(翻譯異常)"; }
+            }
         }
 
         function showMessage(msg) { 
@@ -621,20 +677,6 @@
             document.getElementById('end-title').textContent = gameMode === 'level' ? `到達關卡 ${level}` : '時間到！';
             document.getElementById('game-over').classList.add('show');
         }
-        // --- 綁定虛擬鍵盤事件 ---
-        document.querySelectorAll('.kb-key').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                let keyText = e.target.textContent;
-                // 模擬實體鍵盤的輸入丟給原本的 handleInput 函數
-                if (keyText === 'ENTER') {
-                    handleInput({ key: 'Enter' });
-                } else if (keyText === '⌫') {
-                    handleInput({ key: 'Backspace' });
-                } else {
-                    handleInput({ key: keyText });
-                }
-            });
-        });
     </script>
 </body>
 </html>
