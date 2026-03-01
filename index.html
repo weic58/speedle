@@ -131,6 +131,19 @@
         @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
         .pulse { animation: pulseAnim 1s ease-out; }
         @keyframes pulseAnim { 0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.5); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+        /* --- 手機虛擬鍵盤 --- */
+        #keyboard { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 10px; z-index: 2; }
+        .kb-row { display: flex; justify-content: center; gap: 6px; }
+        .kb-key {
+            background-color: var(--filled-border); color: white; border: none;
+            border-radius: 4px; height: 50px; flex: 1; max-width: 40px; font-size: 1.2rem;
+            font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            user-select: none; /* 防止手機連點時反白文字 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        [data-theme="light"] .kb-key { color: var(--text-color); }
+        .kb-key.wide { max-width: 65px; font-size: 1rem; }
+        .kb-key:active { transform: scale(0.95); opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -203,6 +216,19 @@
 
         <div id="message"></div>
         <div id="word-list"></div>
+        <div id="keyboard">
+            <div class="kb-row">
+                <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button><button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button><button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button><button class="kb-key">P</button>
+            </div>
+            <div class="kb-row">
+                <button class="kb-key">A</button><button class="kb-key">S</button><button class="kb-key">D</button><button class="kb-key">F</button><button class="kb-key">G</button><button class="kb-key">H</button><button class="kb-key">J</button><button class="kb-key">K</button><button class="kb-key">L</button>
+            </div>
+            <div class="kb-row">
+                <button class="kb-key wide">ENTER</button>
+                <button class="kb-key">Z</button><button class="kb-key">X</button><button class="kb-key">C</button><button class="kb-key">V</button><button class="kb-key">B</button><button class="kb-key">N</button><button class="kb-key">M</button>
+                <button class="kb-key wide">⌫</button>
+            </div>
+        </div>
     </div>
 
     <div id="pause-overlay" class="overlay">
@@ -595,6 +621,20 @@
             document.getElementById('end-title').textContent = gameMode === 'level' ? `到達關卡 ${level}` : '時間到！';
             document.getElementById('game-over').classList.add('show');
         }
+        // --- 綁定虛擬鍵盤事件 ---
+        document.querySelectorAll('.kb-key').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                let keyText = e.target.textContent;
+                // 模擬實體鍵盤的輸入丟給原本的 handleInput 函數
+                if (keyText === 'ENTER') {
+                    handleInput({ key: 'Enter' });
+                } else if (keyText === '⌫') {
+                    handleInput({ key: 'Backspace' });
+                } else {
+                    handleInput({ key: keyText });
+                }
+            });
+        });
     </script>
 </body>
 </html>
