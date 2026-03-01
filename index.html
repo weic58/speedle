@@ -70,14 +70,12 @@
         #settings-modal.show { opacity: 1; pointer-events: auto; }
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
         
-        /* --- 按鈕式設定選擇 (統一的高亮樣式) --- */
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-        .len-btn, .kb-size-btn, .time-btn, .fix-btn { 
+        .len-btn, .kb-size-btn, .time-btn { 
             flex: 1; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active, .fix-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
-        .fix-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
 
         /* --- 遊戲儀表板 UI --- */
@@ -123,7 +121,7 @@
         #keyboard { 
             width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 6px; 
             margin-top: auto; 
-            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 30px); 
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px); 
             z-index: 2; flex-shrink: 0; 
         }
         .kb-row { display: flex; justify-content: center; gap: 6px; }
@@ -145,8 +143,10 @@
         #big-countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20rem; font-weight: bold; color: var(--error-color); opacity: 0; pointer-events: none; z-index: 999; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; opacity: 0; pointer-events: none; transition: 0.3s; }
         .overlay.show { opacity: 1; pointer-events: auto; }
-        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: white; text-align: center; }
-        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: #ddd; }
+        
+        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: var(--text-color); text-align: center; }
+        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: var(--text-color); }
+        
         .btn-group { display: flex; gap: 20px; }
         .btn-group button { font-size: 1.2rem; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
@@ -164,6 +164,7 @@
     <header>
         <h1 onclick="quitToHome()" title="回首頁">SPEEDLE</h1>
         <div class="header-controls">
+            <button id="hint-zh-btn" class="icon-btn" title="中文提示" style="display: none;">📖</button>
             <button id="hint-btn" class="icon-btn" title="給個提示" style="display: none;">💡</button>
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
@@ -206,13 +207,6 @@
                 <button class="len-btn active" data-len="4">4</button>
                 <button class="len-btn" data-len="5">5</button>
                 <button class="len-btn" data-len="6">6</button>
-            </div>
-
-            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">固定字母位置:</label>
-            <div class="length-selector">
-                <button class="fix-btn active" data-fix="both" id="fix-both-btn">頭尾</button>
-                <button class="fix-btn" data-fix="start">僅字首</button>
-                <button class="fix-btn" data-fix="end">僅字尾</button>
             </div>
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">初始時間 (秒):</label>
@@ -291,10 +285,10 @@
         let cloudDict = { 3: [], 4: [], 5: [], 6: [] }; 
         let wordSet = new Set(); 
         
-        let gameMode = 'level', targetLength = 4, baseTime = 60, fixMode = 'both';
+        let gameMode = 'level', targetLength = 4, baseTime = 60;
         let gameTime = 60, timeLeft = 0, score = 0, level = 1, wordsInCurrentLevel = 0;
-        let puzzlePattern = []; // 存放當局固定字母，如 ['S', null, null, 'T']
-        let userInput = ""; // 玩家輸入的非固定字母組合
+        let startLetter = "", endLetter = "";
+        let currentMiddleInput = "";
         let submittedWords = new Set();
         let wrongAttempts = 0;
         let isGameOver = false, isPaused = false, isAnimating = false, timerInterval, idleTimer;
@@ -302,6 +296,7 @@
         
         let currentHintWord = null;
         let revealedHints = {};
+        let lastPair = ""; 
 
         let highScores = JSON.parse(localStorage.getItem('speedle_hs_v2'));
         if (!highScores) {
@@ -313,14 +308,14 @@
 
         async function fetchDictionary() {
             try {
-                // 改用 Google 的 10,000 最常用核心單字庫 (去除髒話版)，解決 6 字太罕見的問題
+                // 修改點 2：換回最嚴謹的 1萬字核心字典，杜絕音譯怪字
                 const res = await fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt');
                 const text = await res.text();
                 const rawWords = text.split('\n').map(w => w.trim().toUpperCase());
                 
                 rawWords.forEach(word => {
                     if (word.length >= 3 && word.length <= 6) { 
-                        if (!/[AEIOUY]/.test(word)) return; // 擋掉無母音縮寫
+                        if (!/[AEIOUY]/.test(word)) return;
                         cloudDict[word.length].push(word); 
                         wordSet.add(word); 
                     }
@@ -377,35 +372,12 @@
             forceNextPuzzle();
         }
 
-        // 字數設定 (含 3字 防呆)
         document.querySelectorAll('.len-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.len-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 targetLength = parseInt(e.target.getAttribute('data-len'));
-                
-                const fixBothBtn = document.getElementById('fix-both-btn');
-                if (targetLength === 3) {
-                    fixBothBtn.disabled = true;
-                    if (fixMode === 'both') {
-                        document.querySelector('.fix-btn[data-fix="start"]').click();
-                    }
-                } else {
-                    fixBothBtn.disabled = false;
-                }
-                updateHighScoresUI(); 
-            });
-        });
-
-        // 固定位置設定
-        document.querySelectorAll('.fix-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.target.getAttribute('data-fix');
-                if (targetLength === 3 && mode === 'both') return; // 防呆
-                
-                document.querySelectorAll('.fix-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                fixMode = mode;
+                updateHighScoresUI();
             });
         });
 
@@ -452,6 +424,7 @@
             
             document.getElementById('settings-btn').style.display = 'inline-block';
             document.getElementById('hint-btn').style.display = 'none';
+            document.getElementById('hint-zh-btn').style.display = 'none';
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('restart-btn').style.display = 'none'; 
 
@@ -469,38 +442,33 @@
         }
 
         function generatePuzzle() {
+            document.getElementById('plus-one').classList.remove('show');
+
             const words = cloudDict[targetLength];
             let pairMap = {};
             words.forEach(w => {
-                let key;
-                if (fixMode === 'both') key = w[0] + w[targetLength - 1];
-                else if (fixMode === 'start') key = w[0];
-                else if (fixMode === 'end') key = w[targetLength - 1];
-                
-                if (!pairMap[key]) pairMap[key] = [];
-                pairMap[key].push(w);
+                let pair = w[0] + w[targetLength - 1];
+                if (!pairMap[pair]) pairMap[pair] = [];
+                pairMap[pair].push(w);
             });
 
-            let minRequired = 5; 
-            let validPairs = Object.keys(pairMap).filter(k => pairMap[k].length >= minRequired);
+            let minRequired = targetLength >= 5 ? 8 : 12; 
+            let validPairs = Object.keys(pairMap).filter(pair => pairMap[pair].length >= minRequired && pair !== lastPair);
+            if (validPairs.length === 0) validPairs = Object.keys(pairMap).filter(pair => pair !== lastPair);
             if (validPairs.length === 0) validPairs = Object.keys(pairMap);
             
-            let randomKey = validPairs[Math.floor(Math.random() * validPairs.length)];
+            let randomPair = validPairs[Math.floor(Math.random() * validPairs.length)];
+            lastPair = randomPair;
+            startLetter = randomPair[0]; endLetter = randomPair[1];
             
-            puzzlePattern = new Array(targetLength).fill(null);
-            if (fixMode === 'both') {
-                puzzlePattern[0] = randomKey[0];
-                puzzlePattern[targetLength - 1] = randomKey[1];
-            } else if (fixMode === 'start') {
-                puzzlePattern[0] = randomKey;
-            } else if (fixMode === 'end') {
-                puzzlePattern[targetLength - 1] = randomKey;
-            }
-            
-            userInput = ""; 
-            submittedWords.clear();
+            currentMiddleInput = ""; submittedWords.clear();
             currentHintWord = null; revealedHints = {};
             wrongAttempts = 0;
+            
+            // 修改點 1 & 3：換題時清空上方提示文字，但不清空底下打過的單字紀錄！
+            document.getElementById('message').textContent = ""; 
+            
+            document.getElementById('hint-btn').style.display = 'inline-block';
             resetIdleTimer();
         }
 
@@ -514,10 +482,8 @@
             for (let i = 0; i < targetLength; i++) {
                 const tile = document.createElement('div');
                 tile.classList.add('tile'); tile.id = `tile-${i}`;
-                if (puzzlePattern[i] !== null) { 
-                    tile.textContent = puzzlePattern[i]; 
-                    tile.classList.add('fixed'); 
-                } 
+                if (i === 0) { tile.textContent = startLetter; tile.classList.add('fixed'); } 
+                else if (i === targetLength - 1) { tile.textContent = endLetter; tile.classList.add('fixed'); }
                 boardEl.appendChild(tile);
             }
         }
@@ -525,15 +491,20 @@
         function startGame(mode) {
             initAudio(); gameMode = mode; 
             score = 0; level = 1; wordsInCurrentLevel = 0; isGameOver = false; isPaused = false;
+            lastPair = "";
             
             document.getElementById('score').textContent = score;
+            
+            // 只有在按「開始新遊戲」的時候，才會清空歷史紀錄
             document.getElementById('word-list').innerHTML = ""; 
+            
             document.getElementById('message').textContent = "";
             document.getElementById('pause-overlay').classList.remove('show');
             document.getElementById('game-over').classList.remove('show');
 
             document.getElementById('settings-btn').style.display = 'none';
             document.getElementById('hint-btn').style.display = 'inline-block';
+            document.getElementById('hint-zh-btn').style.display = 'inline-block'; 
             document.getElementById('restart-btn').style.display = 'inline-block'; 
             document.getElementById('pause-btn').style.display = mode === 'practice' ? 'none' : 'inline-block';
             
@@ -578,16 +549,40 @@
             }
         }
 
+        document.getElementById('hint-zh-btn').addEventListener('click', async () => {
+            if (isGameOver || isPaused || isAnimating) return;
+
+            let possibleWords = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
+            if (possibleWords.length === 0) { showMessage("這題已經沒有單字可以提示了！"); return; }
+
+            if (!currentHintWord || submittedWords.has(currentHintWord)) {
+                currentHintWord = possibleWords[Math.floor(Math.random() * possibleWords.length)];
+                revealedHints = {}; updateBoard();
+            }
+
+            showMessage("查詢中文提示中...");
+            let wordToTranslate = currentHintWord;
+            
+            if (TRANSLATION_OVERRIDES[wordToTranslate]) {
+                showMessage(`中文提示: ${TRANSLATION_OVERRIDES[wordToTranslate]}`);
+            } else {
+                try {
+                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${wordToTranslate}`);
+                    const data = await res.json(); 
+                    if (currentHintWord === wordToTranslate) {
+                        showMessage(`中文提示: ${data[0][0][0]}`);
+                    }
+                } catch { 
+                    showMessage("中文提示查詢失敗，請重試"); 
+                }
+            }
+            playBeep(1000, 'triangle', 0.1);
+        });
+
         document.getElementById('hint-btn').addEventListener('click', () => {
             if (isGameOver || isPaused || isAnimating) return;
 
-            let possibleWords = cloudDict[targetLength].filter(w => {
-                for(let i=0; i<targetLength; i++) {
-                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
-                }
-                return !submittedWords.has(w);
-            });
-            
+            let possibleWords = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
             if (possibleWords.length === 0) {
                 showMessage("這題已經沒有單字可以提示了！"); return;
             }
@@ -598,17 +593,23 @@
             }
 
             let unrevealed = [];
-            for (let i = 0; i < targetLength; i++) {
-                if (puzzlePattern[i] === null && !revealedHints[i]) unrevealed.push(i);
+            for (let i = 1; i < targetLength - 1; i++) {
+                if (!revealedHints[i]) unrevealed.push(i);
             }
             
             if (unrevealed.length === 0) {
-                showMessage("這個單字的所有字母都提示完啦！"); return;
+                showMessage("字母提示已全開！請輸入並送出");
+                document.getElementById('hint-btn').style.display = 'none';
+                return;
             }
 
             let pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
             revealedHints[pick] = currentHintWord[pick];
             
+            if (unrevealed.length === 1) {
+                document.getElementById('hint-btn').style.display = 'none';
+            }
+
             updateBoard();
             playBeep(1000, 'triangle', 0.1);
         });
@@ -616,38 +617,32 @@
         async function handleInput(e) {
             if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
             resetIdleTimer(); 
-            
-            let blanksCount = puzzlePattern.filter(p => p === null).length;
-            
+            const middleLength = targetLength - 2;
             if (e.key === 'Backspace') {
-                userInput = userInput.slice(0, -1); updateBoard();
+                currentMiddleInput = currentMiddleInput.slice(0, -1); updateBoard();
             } else if (e.key === 'Enter') {
                 await checkWord();
-            } else if (/^[a-zA-Z]$/.test(e.key) && userInput.length < blanksCount) {
-                userInput += e.key.toUpperCase(); updateBoard();
+            } else if (/^[a-zA-Z]$/.test(e.key) && currentMiddleInput.length < middleLength) {
+                currentMiddleInput += e.key.toUpperCase(); updateBoard();
             }
         }
 
         function updateBoard() {
-            let uIdx = 0;
-            for (let i = 0; i < targetLength; i++) {
-                const tile = document.getElementById(`tile-${i}`);
+            for (let i = 0; i < targetLength - 2; i++) {
+                const actualIndex = i + 1;
+                const tile = document.getElementById(`tile-${actualIndex}`);
                 tile.className = 'tile'; 
                 
-                if (puzzlePattern[i] !== null) {
-                    tile.textContent = puzzlePattern[i];
-                    tile.classList.add('fixed');
+                if (i < currentMiddleInput.length) {
+                    tile.textContent = currentMiddleInput[i]; 
+                    tile.classList.add('filled');
                 } else {
-                    if (uIdx < userInput.length) {
-                        tile.textContent = userInput[uIdx]; 
-                        tile.classList.add('filled');
-                    } else if (revealedHints[i]) {
-                        tile.textContent = revealedHints[i];
+                    if (revealedHints[actualIndex]) {
+                        tile.textContent = revealedHints[actualIndex];
                         tile.classList.add('hinted');
                     } else {
                         tile.textContent = '';
                     }
-                    uIdx++;
                 }
             }
         }
@@ -656,8 +651,8 @@
             playBeep(200, 'sawtooth', 0.15);
             const b = document.getElementById('board'); 
             b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
-            for (let i = 0; i < targetLength; i++) {
-                if (puzzlePattern[i] === null) document.getElementById(`tile-${i}`).classList.add('error');
+            for (let i = 1; i < targetLength - 1; i++) {
+                document.getElementById(`tile-${i}`).classList.add('error');
             }
             
             wrongAttempts++;
@@ -666,23 +661,13 @@
             }
 
             setTimeout(() => {
-                for (let i = 0; i < targetLength; i++) {
-                    if (puzzlePattern[i] === null) document.getElementById(`tile-${i}`).classList.remove('error');
-                }
+                for (let i = 1; i < targetLength - 1; i++) document.getElementById(`tile-${i}`).classList.remove('error');
             }, 400);
         }
 
         async function checkWord() {
-            let blanksCount = puzzlePattern.filter(p => p === null).length;
-            if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
-            
-            let fullWord = "";
-            let uIdx = 0;
-            for (let i = 0; i < targetLength; i++) {
-                if (puzzlePattern[i] !== null) fullWord += puzzlePattern[i];
-                else fullWord += userInput[uIdx++];
-            }
-            
+            if (currentMiddleInput.length !== targetLength - 2) { showMessage("字數不足！"); shakeError(); return; }
+            const fullWord = startLetter + currentMiddleInput + endLetter;
             if (submittedWords.has(fullWord)) { showMessage("剛剛拼過這個字囉！"); shakeError(); return; }
 
             let isValid = wordSet.has(fullWord);
@@ -712,12 +697,13 @@
             const plusOne = document.getElementById('plus-one');
             plusOne.classList.remove('show'); void plusOne.offsetWidth; plusOne.classList.add('show');
             
-            let possibleRemaining = cloudDict[targetLength].filter(w => {
-                for(let i=0; i<targetLength; i++) {
-                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
-                }
-                return !submittedWords.has(w);
-            });
+            if (word === currentHintWord) {
+                currentHintWord = null;
+                revealedHints = {};
+                document.getElementById('hint-btn').style.display = 'inline-block';
+            }
+
+            let possibleRemaining = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
             let forceNext = (possibleRemaining.length === 0);
 
             setTimeout(() => {
@@ -728,7 +714,7 @@
                         showMessage("太神啦！這題被你突破了！時間 +5 秒"); forceNextPuzzle(); 
                     } else {
                         showMessage("得分！時間 +5 秒！請繼續突破題庫");
-                        userInput = ""; updateBoard(); 
+                        currentMiddleInput = ""; updateBoard(); 
                     }
                 } else if (gameMode === 'level') {
                     wordsInCurrentLevel++;
@@ -739,14 +725,14 @@
                         forceNextPuzzle();
                     } else {
                         showMessage(`得分！請繼續輸入不同單字 (${wordsInCurrentLevel}/3)`);
-                        userInput = ""; updateBoard(); 
+                        currentMiddleInput = ""; updateBoard(); 
                     }
                 } else {
                     if(forceNext) {
                         showMessage("太神啦！這個題目的單字全被你拼出來了！自動換題！"); forceNextPuzzle();
                     } else {
                         showMessage("得分！請繼續突破題庫");
-                        userInput = ""; updateBoard(); 
+                        currentMiddleInput = ""; updateBoard(); 
                     }
                 }
                 isAnimating = false;
@@ -789,12 +775,7 @@
         }
 
         function appendMissedWords() {
-            let possibleRemaining = cloudDict[targetLength].filter(w => {
-                for(let i=0; i<targetLength; i++) {
-                    if(puzzlePattern[i] !== null && w[i] !== puzzlePattern[i]) return false;
-                }
-                return !submittedWords.has(w);
-            });
+            let possibleRemaining = cloudDict[targetLength].filter(w => w[0] === startLetter && w[targetLength-1] === endLetter && !submittedWords.has(w));
             if (possibleRemaining.length === 0) return;
 
             let shuffled = possibleRemaining.sort(() => 0.5 - Math.random());
@@ -807,7 +788,7 @@
             divider.style.margin = '15px 0 5px 0';
             divider.style.fontSize = '0.9rem';
             divider.style.fontWeight = 'bold';
-            divider.textContent = "--- 未猜出的可能單字 ---";
+            divider.textContent = "--- 以下為未猜出的可能單字 ---";
             
             missedWords.reverse().forEach(word => {
                 addWordToHistory(word, true);
