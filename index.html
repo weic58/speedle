@@ -71,12 +71,12 @@
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .len-btn, .kb-size-btn, .time-btn { 
+        .len-btn, .kb-size-btn, .time-btn, .theme-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
             min-width: 65px;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active, .theme-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         
         .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .pattern-box {
@@ -319,7 +319,7 @@
 
     <script>
         // --- 系統主題載入與設定 (包含滑桿與手動按鈕邏輯) ---
-        let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; // 預設為 true
+        let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; 
         let savedManualTheme = localStorage.getItem('speedle_manual_theme') || 'dark';
 
         function updateTheme() {
@@ -333,7 +333,6 @@
 
         updateTheme();
         
-        // 設定頁面的滑桿
         const autoThemeToggle = document.getElementById('auto-theme-toggle');
         autoThemeToggle.checked = isAutoTheme;
         autoThemeToggle.addEventListener('change', (e) => {
@@ -346,16 +345,13 @@
             updateTheme();
         });
 
-        // 首頁的 🌓 手動切換按鈕
         document.getElementById('theme-btn').addEventListener('click', () => {
             if(document.activeElement) document.activeElement.blur();
-            // 如果原本是自動，手動按了就強制關閉自動
             if (isAutoTheme) {
                 isAutoTheme = false;
                 autoThemeToggle.checked = false;
                 localStorage.setItem('speedle_auto_theme', 'false');
             }
-            
             savedManualTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             localStorage.setItem('speedle_manual_theme', savedManualTheme);
             updateTheme();
@@ -373,7 +369,10 @@
         let userInput = ""; 
         let submittedWords = new Set();
         let wrongAttempts = 0;
-        let isGameOver = false, isPaused = false, isAnimating = false, timerInterval, idleTimer;
+        
+        // 新增 isChecking 防止快速連續按 Enter 卡死 API，確保全域變數重置
+        let isGameOver = false, isPaused = false, isAnimating = false, isChecking = false;
+        let timerInterval, idleTimer;
         let isMuted = false, audioCtx;
         
         let currentHintWord = null;
@@ -456,9 +455,9 @@
 
         function updateHighScoresUI() {
             let key = getHsKey();
-            let blanks = fixPattern.filter(p => !p).length;
-            document.getElementById('badge-level').textContent = `最高紀錄 (留空 ${blanks} 格): 第 ${getScore('level', key)} 關`;
-            document.getElementById('badge-endless').textContent = `最高紀錄 (留空 ${blanks} 格): ${getScore('endless', key)} 分`;
+            let litCount = fixPattern.filter(p => p).length; // 修改：顯示亮幾格
+            document.getElementById('badge-level').textContent = `最高紀錄 (亮 ${litCount} 格): 第 ${getScore('level', key)} 關`;
+            document.getElementById('badge-endless').textContent = `最高紀錄 (亮 ${litCount} 格): ${getScore('endless', key)} 分`;
             
             document.getElementById('level-desc').textContent = `每關需找出 3 個 ${targetLength} 字詞，時間遞減`;
             document.getElementById('practice-desc').textContent = `無時間限制，輕鬆突破 ${targetLength} 字題庫`;
@@ -688,8 +687,11 @@
 
         function startGame(mode) {
             if(document.activeElement) document.activeElement.blur(); 
+            
+            // 強制重置所有狀態，避免跨局鎖死
             initAudio(); gameMode = mode; 
-            score = 0; level = 1; wordsInCurrentLevel = 0; isGameOver = false; isPaused = false;
+            score = 0; level = 1; wordsInCurrentLevel = 0; 
+            isGameOver = false; isPaused = false; isAnimating = false; isChecking = false;
             recentPuzzles = [];
             
             document.getElementById('score').textContent = score;
@@ -752,7 +754,7 @@
 
         document.getElementById('hint-zh-btn').addEventListener('click', async () => {
             if(document.activeElement) document.activeElement.blur();
-            if (isGameOver || isPaused || isAnimating) return;
+            if (isGameOver || isPaused || isAnimating || isChecking) return;
 
             let possibleWords = cloudDict[targetLength].filter(w => {
                 for(let i=0; i<targetLength; i++) {
@@ -783,7 +785,7 @@
 
         document.getElementById('hint-btn').addEventListener('click', () => {
             if(document.activeElement) document.activeElement.blur();
-            if (isGameOver || isPaused || isAnimating) return;
+            if (isGameOver || isPaused || isAnimating || isChecking) return;
 
             let possibleWords = cloudDict[targetLength].filter(w => {
                 for(let i=0; i<targetLength; i++) {
@@ -829,18 +831,18 @@
         });
 
         async function handleInput(e) {
+            // 防呆鎖定：增加 isChecking 防止 API 延遲時瘋狂觸發
+            if (isGameOver || isPaused || isAnimating || isChecking || !document.getElementById('game-screen').classList.contains('active')) return;
+            
             if (e.key === 'Enter') {
                 if(e.preventDefault) e.preventDefault(); 
-                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
                 resetIdleTimer(); 
                 await checkWord();
             } else if (e.key === 'Backspace') {
                 if(e.preventDefault) e.preventDefault(); 
-                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
                 resetIdleTimer(); 
-                currentMiddleInput = currentMiddleInput.slice(0, -1); updateBoard();
+                userInput = userInput.slice(0, -1); updateBoard();
             } else if (/^[a-zA-Z]$/.test(e.key)) {
-                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
                 resetIdleTimer();
                 let blanksCount = puzzlePattern.filter(p => p === null).length;
                 if (userInput.length < blanksCount) {
@@ -894,10 +896,10 @@
         }
 
         async function checkWord() {
-            if (isGameOver) return; 
-
             let blanksCount = puzzlePattern.filter(p => p === null).length;
             if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
+            
+            isChecking = true; // 鎖死鍵盤，防止在 API 回傳前重複送出或亂刪
             
             let fullWord = "";
             let uIdx = 0;
@@ -906,18 +908,23 @@
                 else fullWord += userInput[uIdx++];
             }
             
-            if (submittedWords.has(fullWord)) { showMessage("剛剛拼過這個字囉！"); shakeError(); return; }
+            if (submittedWords.has(fullWord)) { showMessage("剛剛拼過這個字囉！"); shakeError(); isChecking = false; return; }
 
             let isValid = wordSet.has(fullWord);
             if (!isValid) {
                 try {
-                    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${fullWord}`);
+                    // 加入 3 秒強制中斷，避免外國 API 伺服器掛掉導致你的網頁永久卡死
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${fullWord}`, { signal: controller.signal });
+                    clearTimeout(timeoutId);
                     if(res.ok) { isValid = true; wordSet.add(fullWord); }
                 } catch {}
             }
 
-            if (!isValid) { showMessage("字典裡查無此字！"); shakeError(); return; }
+            if (!isValid) { showMessage("字典裡查無此字！"); shakeError(); isChecking = false; return; }
 
+            isChecking = false; // 解除鎖定，交給 handleSuccess 的動畫鎖
             handleSuccess(fullWord);
         }
 
@@ -949,6 +956,7 @@
             let forceNext = (possibleRemaining.length === 0);
 
             setTimeout(() => {
+                isAnimating = false; // 絕對解除鎖定
                 if (isGameOver) return; 
 
                 boardEl.classList.remove('board-success');
@@ -984,7 +992,6 @@
                         userInput = ""; updateBoard(); 
                     }
                 }
-                isAnimating = false;
             }, 500); 
         }
 
