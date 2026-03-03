@@ -71,13 +71,12 @@
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .len-btn, .kb-size-btn, .time-btn, .fix-btn { 
+        .len-btn, .kb-size-btn, .time-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
             min-width: 65px;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active, .fix-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
-        .fix-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         
         .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .pattern-box {
@@ -156,8 +155,8 @@
         #big-countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20rem; font-weight: bold; color: var(--error-color); opacity: 0; pointer-events: none; z-index: 999; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; opacity: 0; pointer-events: none; transition: 0.3s; }
         .overlay.show { opacity: 1; pointer-events: auto; }
-        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: white; text-align: center; }
-        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: #ddd; }
+        .overlay h2 { font-size: 3rem; margin-bottom: 10px; color: var(--text-color); text-align: center; }
+        .overlay p { font-size: 1.5rem; margin-bottom: 30px; color: var(--text-color); }
         .btn-group { display: flex; gap: 20px; }
         .btn-group button { font-size: 1.2rem; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
@@ -175,8 +174,8 @@
     <header>
         <h1 onclick="quitToHome()" title="回首頁">SPEEDLE</h1>
         <div class="header-controls">
-            <button id="hint-zh-btn" class="icon-btn" title="中文提示" style="display: none;">📖</button>
-            <button id="hint-btn" class="icon-btn" title="給個提示" style="display: none;">💡</button>
+            <button id="hint-zh-btn" class="icon-btn" title="中文提示 (-2分)" style="display: none;">📖</button>
+            <button id="hint-btn" class="icon-btn" title="給個提示 (-1分)" style="display: none;">💡</button>
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
             <button id="mute-btn" class="icon-btn" title="切換音效">🔊</button>
@@ -194,17 +193,21 @@
             <button class="mode-card card-level" onclick="startGame('level')">
                 <h2>🏆 關卡模式</h2>
                 <p>每關需找出 3 個單字，時間遞減</p>
-                <div class="high-score-badge">最高紀錄: <span id="hs-level">0</span></div>
+                <div class="high-score-badge">最高紀錄: <span id="hs-level">第 1 關</span></div>
             </button>
             <button class="mode-card card-endless" onclick="startGame('endless')">
                 <h2>🔥 無限模式</h2>
                 <p>找出所有組合！答對加時</p>
-                <div class="high-score-badge">最高紀錄: <span id="hs-endless">0</span></div>
+                <div class="high-score-badge">最高紀錄: <span id="hs-endless">0 分</span></div>
             </button>
             <button class="mode-card card-practice" onclick="startGame('practice')">
                 <h2>🧘 練習模式</h2>
                 <p>無時間限制，輕鬆突破題庫</p>
             </button>
+        </div>
+
+        <div style="margin-top: 30px; font-size: 0.85rem; color: var(--def-color); text-align: center;">
+            Created by weic58 & Gemini, 2026.<br>v3
         </div>
     </div>
 
@@ -292,6 +295,11 @@
     </div>
 
     <script>
+        // 修改點 1：自動日夜主題 (網頁載入時執行)
+        const hour = new Date().getHours();
+        const autoTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', autoTheme);
+
         const TRANSLATION_OVERRIDES = {
             "WOKE": "覺醒的; 醒來(wake過去式)",
         };
@@ -312,25 +320,34 @@
         
         let currentHintWord = null;
         let revealedHints = {};
-        let lastPair = ""; 
+        
+        let recentPuzzles = []; 
 
-        let highScores = JSON.parse(localStorage.getItem('speedle_hs_v2'));
+        let highScores = JSON.parse(localStorage.getItem('speedle_hs_v4'));
         if (!highScores) {
             highScores = {
-                level: { 3: 0, 4: 0, 5: 0, 6: 0 },
+                level: { 3: 1, 4: 1, 5: 1, 6: 1 }, 
                 endless: { 3: 0, 4: 0, 5: 0, 6: 0 }
             };
         }
 
         async function fetchDictionary() {
             try {
-                const res = await fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt');
+                // 修改點 2：換回完整的 2 萬字庫，讓 DUNK 這種字可以自動納入
+                const res = await fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/20k.txt');
                 const text = await res.text();
                 const rawWords = text.split('\n').map(w => w.trim().toUpperCase());
+                const rawSet = new Set(rawWords);
                 
                 rawWords.forEach(word => {
                     if (word.length >= 3 && word.length <= 6) { 
                         if (!/[AEIOUY]/.test(word)) return;
+                        
+                        if (word.endsWith('S') && !word.endsWith('SS')) {
+                            if (rawSet.has(word.slice(0, -1))) return; 
+                            if (word.endsWith('ES') && rawSet.has(word.slice(0, -2))) return; 
+                        }
+                        
                         cloudDict[word.length].push(word); 
                         wordSet.add(word); 
                     }
@@ -344,15 +361,49 @@
         }
         window.onload = fetchDictionary;
 
+        // 修改點 3：建立翻譯小幫手，提供英英字典釋義作為救場
+        async function getTranslation(word) {
+            if (TRANSLATION_OVERRIDES[word]) return TRANSLATION_OVERRIDES[word];
+            
+            let enDef = "";
+            try {
+                const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+                if (dictRes.ok) {
+                    const dictData = await dictRes.json();
+                    if (dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
+                        enDef = dictData[0].meanings[0].definitions[0].definition;
+                    }
+                }
+            } catch(e) {}
+
+            let zhText = "";
+            try {
+                const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${word}`);
+                const data = await res.json(); 
+                zhText = data[0][0][0];
+            } catch { 
+                try {
+                    const res2 = await fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|zh-TW`);
+                    const data2 = await res2.json();
+                    zhText = (data2.responseData.translatedText.toUpperCase() !== word) ? data2.responseData.translatedText : "(無中文釋義)";
+                } catch {
+                    zhText = "(翻譯異常)"; 
+                }
+            }
+            
+            if (enDef) return `${zhText} (英釋: ${enDef})`;
+            return zhText;
+        }
+
         function updateHighScoresUI() {
-            document.getElementById('hs-level').textContent = highScores.level[targetLength];
-            document.getElementById('hs-endless').textContent = highScores.endless[targetLength];
+            document.getElementById('hs-level').textContent = `第 ${highScores.level[targetLength]} 關`;
+            document.getElementById('hs-endless').textContent = `${highScores.endless[targetLength]} 分`;
         }
 
         function saveHighScore() {
-            if (gameMode === 'level' && score > highScores.level[targetLength]) highScores.level[targetLength] = score;
+            if (gameMode === 'level' && level > highScores.level[targetLength]) highScores.level[targetLength] = level;
             if (gameMode === 'endless' && score > highScores.endless[targetLength]) highScores.endless[targetLength] = score;
-            localStorage.setItem('speedle_hs_v2', JSON.stringify(highScores));
+            localStorage.setItem('speedle_hs_v4', JSON.stringify(highScores));
             updateHighScoresUI();
         }
 
@@ -501,12 +552,16 @@
             let blanksCount = fixPattern.filter(p => !p).length;
             let minRequired = blanksCount === 1 ? 3 : 5; 
             
-            let validKeys = Object.keys(map).filter(k => map[k].length >= minRequired && k !== lastPair);
-            if (validKeys.length === 0) validKeys = Object.keys(map).filter(k => k !== lastPair);
-            if (validKeys.length === 0) validKeys = Object.keys(map);
+            let validKeys = Object.keys(map).filter(k => map[k].length >= minRequired && !recentPuzzles.includes(k));
+            if (validKeys.length === 0) validKeys = Object.keys(map).filter(k => !recentPuzzles.includes(k));
+            if (validKeys.length === 0) {
+                validKeys = Object.keys(map);
+                recentPuzzles = []; 
+            }
             
             let randomKey = validKeys[Math.floor(Math.random() * validKeys.length)];
-            lastPair = randomKey;
+            recentPuzzles.push(randomKey);
+            if (recentPuzzles.length > 20) recentPuzzles.shift();
             
             puzzlePattern = new Array(targetLength).fill(null);
             let kIdx = 0;
@@ -548,7 +603,7 @@
         function startGame(mode) {
             initAudio(); gameMode = mode; 
             score = 0; level = 1; wordsInCurrentLevel = 0; isGameOver = false; isPaused = false;
-            lastPair = "";
+            recentPuzzles = [];
             
             document.getElementById('score').textContent = score;
             document.getElementById('word-list').innerHTML = ""; 
@@ -619,22 +674,12 @@
                 revealedHints = {}; updateBoard();
             }
 
-            showMessage("查詢中文提示中...");
-            let wordToTranslate = currentHintWord;
-            
-            if (TRANSLATION_OVERRIDES[wordToTranslate]) {
-                showMessage(`中文提示: ${TRANSLATION_OVERRIDES[wordToTranslate]}`);
-            } else {
-                try {
-                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${wordToTranslate}`);
-                    const data = await res.json(); 
-                    if (currentHintWord === wordToTranslate) {
-                        showMessage(`中文提示: ${data[0][0][0]}`);
-                    }
-                } catch { 
-                    showMessage("中文提示查詢失敗，請重試"); 
-                }
-            }
+            score -= 2;
+            document.getElementById('score').textContent = score;
+
+            showMessage("查詢中文提示中... (-2 分)");
+            let resultText = await getTranslation(currentHintWord);
+            showMessage(`中文提示: ${resultText}`);
             playBeep(1000, 'triangle', 0.1);
         });
 
@@ -666,6 +711,10 @@
                 document.getElementById('hint-btn').style.display = 'none';
                 return;
             }
+
+            score -= 1;
+            document.getElementById('score').textContent = score;
+            showMessage("獲得字母提示！ (-1 分)");
 
             let pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
             revealedHints[pick] = currentHintWord[pick];
@@ -738,6 +787,8 @@
         }
 
         async function checkWord() {
+            if (isGameOver) return; 
+
             let blanksCount = puzzlePattern.filter(p => p === null).length;
             if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
             
@@ -764,6 +815,8 @@
         }
 
         function handleSuccess(word) {
+            if (isGameOver) return; 
+
             isAnimating = true; playBeep(1200, 'sine', 0.1);
             score++; document.getElementById('score').textContent = score;
             submittedWords.add(word);
@@ -777,7 +830,6 @@
             const plusOne = document.getElementById('plus-one');
             plusOne.classList.remove('show'); void plusOne.offsetWidth; plusOne.classList.add('show');
             
-            // 【修改點】：只要答對任何字，就清空提示，避免下一回合殘留
             currentHintWord = null;
             revealedHints = {};
             document.getElementById('hint-btn').style.display = 'inline-block';
@@ -791,6 +843,8 @@
             let forceNext = (possibleRemaining.length === 0);
 
             setTimeout(() => {
+                if (isGameOver) return; 
+
                 boardEl.classList.remove('board-success');
                 if (gameMode === 'endless') {
                     timeLeft += 5; document.getElementById('time').textContent = timeLeft;
@@ -802,10 +856,15 @@
                     }
                 } else if (gameMode === 'level') {
                     wordsInCurrentLevel++;
-                    if (wordsInCurrentLevel >= 3 || forceNext) { 
+                    let isLevelPassed = wordsInCurrentLevel >= 3;
+                    
+                    if (isLevelPassed) { 
                         showMessage(`通關！進入關卡 ${level + 1}`);
                         level++; wordsInCurrentLevel = 0; timeLeft = Math.max(10, baseTime - (level * 5)); 
                         document.getElementById('mode-display').textContent = `🏆 關卡 ${level}`;
+                        forceNextPuzzle();
+                    } else if (forceNext) {
+                        showMessage(`這題沒有單字了！換題繼續 (${wordsInCurrentLevel}/3)`);
                         forceNextPuzzle();
                     } else {
                         showMessage(`得分！請繼續輸入不同單字 (${wordsInCurrentLevel}/3)`);
@@ -848,22 +907,9 @@
 
             itemDiv.appendChild(miniBoard); itemDiv.appendChild(defSpan); itemDiv.appendChild(yahooLink); list.prepend(itemDiv);
 
-            if (TRANSLATION_OVERRIDES[word]) {
-                defSpan.textContent = TRANSLATION_OVERRIDES[word];
-            } else {
-                try {
-                    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q=${word}`);
-                    const data = await res.json(); defSpan.textContent = data[0][0][0];
-                } catch { 
-                    try {
-                        const res2 = await fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|zh-TW`);
-                        const data2 = await res2.json();
-                        defSpan.textContent = (data2.responseData.translatedText.toUpperCase() !== word) ? data2.responseData.translatedText : "(無中文釋義)";
-                    } catch {
-                        defSpan.textContent = "(翻譯異常)"; 
-                    }
-                }
-            }
+            // 修改點 3：使用全新的 getTranslation 助理
+            let resultText = await getTranslation(word);
+            defSpan.innerHTML = resultText;
         }
 
         function appendMissedWords() {
