@@ -318,7 +318,7 @@
     </div>
 
     <script>
-        // --- 系統主題載入與設定 ---
+        // --- 系統主題載入與設定 (包含滑桿與手動按鈕邏輯) ---
         let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; 
         let savedManualTheme = localStorage.getItem('speedle_manual_theme') || 'dark';
 
@@ -401,8 +401,8 @@
                         if (!/[AEIOUY]/.test(word)) return;
                         
                         // 神級縮寫過濾器
-                        if (/[^AEIOUY]{4}/.test(word)) return; // 阻擋 4 個連續子音 (如 CTRL)
-                        if (word.length === 4 && /[^AEIOUY]{3}/.test(word) && !/(CH|SH|TH|GH|PH|CK|NG)/.test(word)) return; // 精準剔除 4 字縮寫 (EXCL, ESRL)
+                        if (/[^AEIOUY]{4}/.test(word)) return; 
+                        if (word.length === 4 && /[^AEIOUY]{3}/.test(word) && !/(CH|SH|TH|GH|PH|CK|NG)/.test(word)) return; 
                         
                         if (word.endsWith('S') && !word.endsWith('SS')) {
                             if (rawSet.has(word.slice(0, -1))) return; 
@@ -898,6 +898,8 @@
         }
 
         async function checkWord() {
+            if (isGameOver) return; 
+
             let blanksCount = puzzlePattern.filter(p => p === null).length;
             if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
             
@@ -1041,8 +1043,9 @@
                 enDiv.className = 'en-def-box';
                 enDiv.textContent = resultObj.en;
                 
+                // 修改點：只需要按一次就能切換展開/收合
                 enLink.onclick = () => {
-                    enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
+                    enDiv.style.display = enDiv.style.display === 'block' ? 'none' : 'block';
                 };
                 
                 actionGrp.appendChild(enLink);
