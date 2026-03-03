@@ -59,7 +59,7 @@
         .mode-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .mode-card h2 { margin: 0 0 5px 0; font-size: 1.8rem; letter-spacing: 1px; }
         .mode-card p { margin: 0 0 10px 0; font-size: 1rem; opacity: 0.9; }
-        .high-score-badge { background: rgba(0,0,0,0.3); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; }
+        .high-score-badge { background: rgba(0,0,0,0.3); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; margin-top: 5px; }
 
         .card-level { background: linear-gradient(135deg, #f39c12, #d35400); }
         .card-endless { background: linear-gradient(135deg, #e74c3c, #c0392b); }
@@ -71,12 +71,12 @@
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .len-btn, .kb-size-btn, .time-btn, .theme-btn { 
+        .len-btn, .kb-size-btn, .time-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
             min-width: 65px;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active, .theme-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         
         .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .pattern-box {
@@ -87,6 +87,16 @@
         .pattern-box.active {
             background-color: var(--wordle-green); border-color: var(--wordle-green);
         }
+
+        /* --- 滑桿開關樣式 (Toggle Switch) --- */
+        .switch-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; text-align: left; }
+        .switch-label { font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(24px); }
 
         .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
 
@@ -112,9 +122,11 @@
         .tile.error { background-color: var(--error-color) !important; border-color: var(--error-color) !important; color: white; }
         .board-success .tile { background-color: var(--wordle-green); border-color: var(--wordle-green); color: white; }
 
-        /* 動態加扣分動畫文字 */
-        .floating-score { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
-        .floating-score.show { animation: floatUp 0.8s ease-out forwards; }
+        .plus-one { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--wordle-green); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
+        .plus-one.show { animation: floatUp 0.8s ease-out forwards; }
+        
+        .minus-score { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--error-color); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
+        .minus-score.show { animation: floatUp 0.8s ease-out forwards; }
 
         #message { height: 20px; font-weight: bold; color: var(--error-color); margin-bottom: 10px; z-index: 2; flex-shrink: 0; }
         
@@ -131,7 +143,6 @@
         .yahoo-link { color: var(--accent-color); text-decoration: none; font-size: 0.85rem; margin-left: 5px; background: rgba(74,144,226,0.1); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; cursor: pointer; }
         .yahoo-link:hover { text-decoration: underline; }
         
-        /* 展開的英釋區域 */
         .en-def-box { display: none; font-size: 0.9rem; color: var(--wordle-yellow); padding-top: 5px; border-top: 1px dashed var(--border-color); }
 
         /* --- 手機虛擬鍵盤 --- */
@@ -184,6 +195,7 @@
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
             <button id="mute-btn" class="icon-btn" title="切換音效">🔊</button>
+            <button id="theme-btn" class="icon-btn" title="切換深淺色">🌓</button>
             <button id="settings-btn" class="icon-btn" title="設定">⚙️</button>
         </div>
     </header>
@@ -230,11 +242,12 @@
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">點亮要固定的字母位置:</label>
             <div id="pattern-selector" class="pattern-selector"></div>
 
-            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">色彩主題:</label>
-            <div class="length-selector" id="theme-selector">
-                <button class="theme-btn active" data-theme-val="auto">自動</button>
-                <button class="theme-btn" data-theme-val="dark">暗色</button>
-                <button class="theme-btn" data-theme-val="light">亮色</button>
+            <div class="switch-container">
+                <span class="switch-label">自動切換亮暗主題 (依時間)</span>
+                <label class="switch">
+                    <input type="checkbox" id="auto-theme-toggle">
+                    <span class="slider"></span>
+                </label>
             </div>
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">初始時間 (秒):</label>
@@ -305,7 +318,49 @@
     </div>
 
     <script>
-        // --- 核心變數初始化 ---
+        // --- 系統主題載入與設定 (包含滑桿與手動按鈕邏輯) ---
+        let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; // 預設為 true
+        let savedManualTheme = localStorage.getItem('speedle_manual_theme') || 'dark';
+
+        function updateTheme() {
+            if (isAutoTheme) {
+                const hour = new Date().getHours();
+                document.documentElement.setAttribute('data-theme', (hour >= 6 && hour < 18) ? 'light' : 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', savedManualTheme);
+            }
+        }
+
+        updateTheme();
+        
+        // 設定頁面的滑桿
+        const autoThemeToggle = document.getElementById('auto-theme-toggle');
+        autoThemeToggle.checked = isAutoTheme;
+        autoThemeToggle.addEventListener('change', (e) => {
+            isAutoTheme = e.target.checked;
+            localStorage.setItem('speedle_auto_theme', isAutoTheme);
+            if (!isAutoTheme) {
+                savedManualTheme = document.documentElement.getAttribute('data-theme');
+                localStorage.setItem('speedle_manual_theme', savedManualTheme);
+            }
+            updateTheme();
+        });
+
+        // 首頁的 🌓 手動切換按鈕
+        document.getElementById('theme-btn').addEventListener('click', () => {
+            if(document.activeElement) document.activeElement.blur();
+            // 如果原本是自動，手動按了就強制關閉自動
+            if (isAutoTheme) {
+                isAutoTheme = false;
+                autoThemeToggle.checked = false;
+                localStorage.setItem('speedle_auto_theme', 'false');
+            }
+            
+            savedManualTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('speedle_manual_theme', savedManualTheme);
+            updateTheme();
+        });
+
         const TRANSLATION_OVERRIDES = { "WOKE": "覺醒的; 醒來(wake過去式)" };
         let cloudDict = { 3: [], 4: [], 5: [], 6: [] }; 
         let wordSet = new Set(); 
@@ -325,33 +380,6 @@
         let revealedHints = {};
         let recentPuzzles = []; 
 
-        // --- 系統主題載入與設定 ---
-        function applyTheme(theme) {
-            if (theme === 'auto') {
-                const hour = new Date().getHours();
-                document.documentElement.setAttribute('data-theme', (hour >= 6 && hour < 18) ? 'light' : 'dark');
-            } else {
-                document.documentElement.setAttribute('data-theme', theme);
-            }
-        }
-        let currentTheme = localStorage.getItem('speedle_theme') || 'auto';
-        applyTheme(currentTheme);
-        
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            if (btn.getAttribute('data-theme-val') === currentTheme) {
-                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            }
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentTheme = e.target.getAttribute('data-theme-val');
-                localStorage.setItem('speedle_theme', currentTheme);
-                applyTheme(currentTheme);
-            });
-        });
-
-        // --- 最高分紀錄 (加入格數分類機制) ---
         let highScores = JSON.parse(localStorage.getItem('speedle_hs_v5'));
         if (!highScores) { highScores = { level: {}, endless: {} }; }
         
@@ -384,6 +412,7 @@
 
                 document.getElementById('loading-msg').style.display = 'none';
                 renderPatternSelector(); 
+                updateHighScoresUI();
                 document.getElementById('mode-cards').classList.add('ready');
             } catch (error) { document.getElementById('loading-msg').textContent = "字典載入失敗，請重整"; }
         }
@@ -427,8 +456,9 @@
 
         function updateHighScoresUI() {
             let key = getHsKey();
-            document.getElementById('badge-level').textContent = `最高紀錄: 第 ${getScore('level', key)} 關`;
-            document.getElementById('badge-endless').textContent = `最高紀錄: ${getScore('endless', key)} 分`;
+            let blanks = fixPattern.filter(p => !p).length;
+            document.getElementById('badge-level').textContent = `最高紀錄 (留空 ${blanks} 格): 第 ${getScore('level', key)} 關`;
+            document.getElementById('badge-endless').textContent = `最高紀錄 (留空 ${blanks} 格): ${getScore('endless', key)} 分`;
             
             document.getElementById('level-desc').textContent = `每關需找出 3 個 ${targetLength} 字詞，時間遞減`;
             document.getElementById('practice-desc').textContent = `無時間限制，輕鬆突破 ${targetLength} 字題庫`;
@@ -442,14 +472,13 @@
             updateHighScoresUI();
         }
 
-        // --- 動態浮動文字特效 ---
         function showFloatingAnim(text, color) {
             const el = document.createElement('div');
             el.className = 'floating-score show';
             el.style.color = color;
             el.textContent = text;
             document.getElementById('board-container').appendChild(el);
-            setTimeout(() => el.remove(), 1000); // 動畫跑完自動銷毀
+            setTimeout(() => el.remove(), 800); 
         }
 
         function initAudio() {
@@ -476,6 +505,7 @@
         }
 
         function usePass() {
+            if(document.activeElement) document.activeElement.blur();
             score--; wrongAttempts = 0;
             document.getElementById('score').textContent = score;
             showFloatingAnim("-1", "var(--error-color)");
@@ -494,6 +524,7 @@
                     let newPattern = [...fixPattern];
                     newPattern[i] = !newPattern[i];
                     let fixedCount = newPattern.filter(x => x).length;
+                    
                     if (fixedCount > 0 && fixedCount < targetLength) {
                         fixPattern[i] = !fixPattern[i];
                         renderPatternSelector();
@@ -536,8 +567,14 @@
             });
         });
 
-        document.getElementById('mute-btn').addEventListener('click', (e) => { isMuted = !isMuted; e.target.textContent = isMuted ? '🔇' : '🔊'; });
-        document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.add('show'); });
+        document.getElementById('mute-btn').addEventListener('click', (e) => { 
+            if(document.activeElement) document.activeElement.blur();
+            isMuted = !isMuted; e.target.textContent = isMuted ? '🔇' : '🔊'; 
+        });
+        document.getElementById('settings-btn').addEventListener('click', () => { 
+            if(document.activeElement) document.activeElement.blur();
+            document.getElementById('settings-modal').classList.add('show'); 
+        });
         document.getElementById('pause-btn').addEventListener('click', togglePause);
         document.getElementById('restart-btn').addEventListener('click', () => { startGame(gameMode); });
         
@@ -545,10 +582,11 @@
 
         document.querySelectorAll('.kb-key').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                if(document.activeElement) document.activeElement.blur();
                 let keyText = e.target.textContent;
-                if (keyText === 'ENTER') { handleInput({ key: 'Enter' }); } 
-                else if (keyText === '⌫') { handleInput({ key: 'Backspace' }); } 
-                else { handleInput({ key: keyText }); }
+                if (keyText === 'ENTER') { handleInput({ key: 'Enter', preventDefault: ()=>{} }); } 
+                else if (keyText === '⌫') { handleInput({ key: 'Backspace', preventDefault: ()=>{} }); } 
+                else { handleInput({ key: keyText, preventDefault: ()=>{} }); }
             });
         });
 
@@ -566,13 +604,19 @@
             document.getElementById('restart-btn').style.display = 'none'; 
 
             document.getElementById('keyboard').style.display = 'flex';
-            document.getElementById('skip-btn').textContent = "⏭️ 換個題目";
-            document.getElementById('skip-btn').onclick = forceNextPuzzle;
+            
+            const skipBtn = document.getElementById('skip-btn');
+            skipBtn.textContent = "⏭️ 換個題目";
+            skipBtn.onclick = () => {
+                if(document.activeElement) document.activeElement.blur();
+                forceNextPuzzle();
+            };
 
             updateHighScoresUI();
         }
 
         function togglePause() {
+            if(document.activeElement) document.activeElement.blur();
             if (isGameOver || gameMode === 'practice') return;
             isPaused = !isPaused; document.getElementById('pause-overlay').classList.toggle('show', isPaused);
             if (isPaused) clearTimeout(idleTimer); else resetIdleTimer();
@@ -594,14 +638,13 @@
             let blanksCount = fixPattern.filter(p => !p).length;
             let minRequired = blanksCount === 1 ? 3 : 5; 
             
-            // 修復換局 Bug：嚴格確保 validKeys 生成的兩階段降級
             let validKeys = Object.keys(map).filter(k => map[k].length >= minRequired && !recentPuzzles.includes(k));
             if (validKeys.length === 0) {
                 validKeys = Object.keys(map).filter(k => map[k].length >= minRequired);
                 recentPuzzles = []; 
             }
             if (validKeys.length === 0) {
-                validKeys = Object.keys(map); // 最後防線
+                validKeys = Object.keys(map); 
             }
             
             let randomKey = validKeys[Math.floor(Math.random() * validKeys.length)];
@@ -634,7 +677,7 @@
             const boardEl = document.getElementById('board'); boardEl.innerHTML = "";
             for (let i = 0; i < targetLength; i++) {
                 const tile = document.createElement('div');
-                tile.classList.add('tile'); tile.id = `tile-${i}`;
+                tile.className = 'tile'; tile.id = `tile-${i}`;
                 if (puzzlePattern[i] !== null) { 
                     tile.textContent = puzzlePattern[i]; 
                     tile.classList.add('fixed'); 
@@ -644,6 +687,7 @@
         }
 
         function startGame(mode) {
+            if(document.activeElement) document.activeElement.blur(); 
             initAudio(); gameMode = mode; 
             score = 0; level = 1; wordsInCurrentLevel = 0; isGameOver = false; isPaused = false;
             recentPuzzles = [];
@@ -661,8 +705,13 @@
             document.getElementById('pause-btn').style.display = mode === 'practice' ? 'none' : 'inline-block';
             
             document.getElementById('keyboard').style.display = 'flex';
-            document.getElementById('skip-btn').textContent = "⏭️ 換個題目";
-            document.getElementById('skip-btn').onclick = forceNextPuzzle;
+            
+            const skipBtn = document.getElementById('skip-btn');
+            skipBtn.textContent = "⏭️ 換個題目";
+            skipBtn.onclick = () => {
+                if(document.activeElement) document.activeElement.blur();
+                forceNextPuzzle();
+            };
 
             const timeContainer = document.getElementById('time-container');
 
@@ -702,6 +751,7 @@
         }
 
         document.getElementById('hint-zh-btn').addEventListener('click', async () => {
+            if(document.activeElement) document.activeElement.blur();
             if (isGameOver || isPaused || isAnimating) return;
 
             let possibleWords = cloudDict[targetLength].filter(w => {
@@ -732,6 +782,7 @@
         });
 
         document.getElementById('hint-btn').addEventListener('click', () => {
+            if(document.activeElement) document.activeElement.blur();
             if (isGameOver || isPaused || isAnimating) return;
 
             let possibleWords = cloudDict[targetLength].filter(w => {
@@ -778,17 +829,23 @@
         });
 
         async function handleInput(e) {
-            if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
-            resetIdleTimer(); 
-            
-            let blanksCount = puzzlePattern.filter(p => p === null).length;
-            
-            if (e.key === 'Backspace') {
-                userInput = userInput.slice(0, -1); updateBoard();
-            } else if (e.key === 'Enter') {
+            if (e.key === 'Enter') {
+                if(e.preventDefault) e.preventDefault(); 
+                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
+                resetIdleTimer(); 
                 await checkWord();
-            } else if (/^[a-zA-Z]$/.test(e.key) && userInput.length < blanksCount) {
-                userInput += e.key.toUpperCase(); updateBoard();
+            } else if (e.key === 'Backspace') {
+                if(e.preventDefault) e.preventDefault(); 
+                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
+                resetIdleTimer(); 
+                currentMiddleInput = currentMiddleInput.slice(0, -1); updateBoard();
+            } else if (/^[a-zA-Z]$/.test(e.key)) {
+                if (isGameOver || isPaused || isAnimating || !document.getElementById('game-screen').classList.contains('active')) return;
+                resetIdleTimer();
+                let blanksCount = puzzlePattern.filter(p => p === null).length;
+                if (userInput.length < blanksCount) {
+                    userInput += e.key.toUpperCase(); updateBoard();
+                }
             }
         }
 
@@ -967,7 +1024,6 @@
             let resultObj = await getTranslation(word);
             defSpan.textContent = resultObj.zh;
             
-            // 需求 6：優雅的底部展開英釋按鈕
             if (resultObj.en) {
                 const enLink = document.createElement('a');
                 enLink.className = 'yahoo-link';
@@ -1024,9 +1080,15 @@
         function reviewBoard() {
             document.getElementById('game-over').classList.remove('show');
             document.getElementById('keyboard').style.display = 'none';
-            document.getElementById('skip-btn').textContent = "結束回顧 (回首頁)";
-            document.getElementById('skip-btn').style.display = 'block';
-            document.getElementById('skip-btn').onclick = quitToHome;
+            
+            const skipBtn = document.getElementById('skip-btn');
+            skipBtn.textContent = "結束回顧 (回首頁)";
+            skipBtn.style.display = 'block';
+            skipBtn.onclick = () => {
+                if(document.activeElement) document.activeElement.blur();
+                quitToHome();
+            };
+            
             document.getElementById('pass-btn').style.display = 'none';
         }
 
