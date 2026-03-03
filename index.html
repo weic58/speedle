@@ -26,7 +26,7 @@
             font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
             display: flex; flex-direction: column; align-items: center;
             margin: 0; padding: 20px; height: 100vh; box-sizing: border-box;
-            transition: 0.3s; overflow: hidden; position: relative;
+            transition: background-color 0.3s, color 0.3s; overflow: hidden; position: relative;
         }
 
         button { touch-action: manipulation; }
@@ -68,15 +68,15 @@
         /* --- 設定齒輪 Modal --- */
         #settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 30; opacity: 0; pointer-events: none; transition: 0.3s; }
         #settings-modal.show { opacity: 1; pointer-events: auto; }
-        .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); }
+        .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .len-btn, .kb-size-btn, .time-btn { 
+        .len-btn, .kb-size-btn, .time-btn, .theme-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
             min-width: 65px;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active, .theme-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         
         .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .pattern-box {
@@ -88,7 +88,7 @@
             background-color: var(--wordle-green); border-color: var(--wordle-green);
         }
 
-        .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .close-btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
 
         /* --- 遊戲儀表板 UI --- */
         #game-info { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; flex-shrink: 0; }
@@ -112,11 +112,9 @@
         .tile.error { background-color: var(--error-color) !important; border-color: var(--error-color) !important; color: white; }
         .board-success .tile { background-color: var(--wordle-green); border-color: var(--wordle-green); color: white; }
 
-        .plus-one { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--wordle-green); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
-        .plus-one.show { animation: floatUp 0.8s ease-out forwards; }
-        
-        .minus-score { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--error-color); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
-        .minus-score.show { animation: floatUp 0.8s ease-out forwards; }
+        /* 動態加扣分動畫文字 */
+        .floating-score { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
+        .floating-score.show { animation: floatUp 0.8s ease-out forwards; }
 
         #message { height: 20px; font-weight: bold; color: var(--error-color); margin-bottom: 10px; z-index: 2; flex-shrink: 0; }
         
@@ -125,12 +123,16 @@
 
         /* --- 單字歷史列表 --- */
         #word-list { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; z-index: 2; flex-grow: 1; max-height: none; margin-bottom: 10px; }
-        .submitted-item { display: flex; align-items: center; gap: 15px; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; flex-shrink: 0; }
+        .history-wrapper { display: flex; flex-direction: column; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; flex-shrink: 0; gap: 5px; }
+        .history-main-row { display: flex; align-items: center; gap: 15px; }
         .mini-board { display: flex; gap: 3px; flex-shrink: 0; }
         .mini-tile { width: 25px; height: 25px; background-color: var(--wordle-green); color: white; display: flex; justify-content: center; align-items: center; font-size: 1rem; font-weight: bold; border-radius: 2px; }
         .definition { font-size: 1rem; color: var(--def-color); flex-grow: 1; word-break: break-word; }
-        .yahoo-link { color: var(--accent-color); text-decoration: none; font-size: 0.85rem; margin-left: 5px; background: rgba(74,144,226,0.1); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+        .yahoo-link { color: var(--accent-color); text-decoration: none; font-size: 0.85rem; margin-left: 5px; background: rgba(74,144,226,0.1); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; cursor: pointer; }
         .yahoo-link:hover { text-decoration: underline; }
+        
+        /* 展開的英釋區域 */
+        .en-def-box { display: none; font-size: 0.9rem; color: var(--wordle-yellow); padding-top: 5px; border-top: 1px dashed var(--border-color); }
 
         /* --- 手機虛擬鍵盤 --- */
         #keyboard { 
@@ -182,7 +184,6 @@
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
             <button id="mute-btn" class="icon-btn" title="切換音效">🔊</button>
-            <button id="theme-btn" class="icon-btn" title="切換深淺色">🌓</button>
             <button id="settings-btn" class="icon-btn" title="設定">⚙️</button>
         </div>
     </header>
@@ -195,22 +196,22 @@
         <div id="mode-cards" class="mode-cards">
             <button class="mode-card card-level" onclick="startGame('level')">
                 <h2>🏆 關卡模式</h2>
-                <p>每關需找出 3 個單字，時間遞減</p>
-                <div class="high-score-badge">最高紀錄: <span id="hs-level">第 1 關</span></div>
+                <p id="level-desc">每關需找出 3 個 4 字詞，時間遞減</p>
+                <div class="high-score-badge" id="badge-level">最高紀錄: 第 1 關</div>
             </button>
             <button class="mode-card card-endless" onclick="startGame('endless')">
                 <h2>🔥 無限模式</h2>
                 <p>找出所有組合！答對加時</p>
-                <div class="high-score-badge">最高紀錄: <span id="hs-endless">0 分</span></div>
+                <div class="high-score-badge" id="badge-endless">最高紀錄: 0 分</div>
             </button>
             <button class="mode-card card-practice" onclick="startGame('practice')">
                 <h2>🧘 練習模式</h2>
-                <p>無時間限制，輕鬆突破題庫</p>
+                <p id="practice-desc">無時間限制，輕鬆突破題庫</p>
             </button>
         </div>
 
         <div style="margin-top: 30px; font-size: 0.85rem; color: var(--def-color); text-align: center;">
-            Created by weic58 & Gemini, 2026.<br>v3.1
+            Created by weic58 & Gemini, 2026.<br>v3.2
         </div>
     </div>
 
@@ -228,6 +229,13 @@
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">點亮要固定的字母位置:</label>
             <div id="pattern-selector" class="pattern-selector"></div>
+
+            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">色彩主題:</label>
+            <div class="length-selector" id="theme-selector">
+                <button class="theme-btn active" data-theme-val="auto">自動</button>
+                <button class="theme-btn" data-theme-val="dark">暗色</button>
+                <button class="theme-btn" data-theme-val="light">亮色</button>
+            </div>
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">初始時間 (秒):</label>
             <div class="length-selector">
@@ -260,8 +268,6 @@
         <button id="pass-btn" onclick="usePass()">⏭️ Pass (扣 1 分)</button>
 
         <div id="board-container">
-            <div class="plus-one" id="plus-one">+1</div>
-            <div class="minus-score" id="minus-score"></div>
             <div id="board"></div>
         </div>
 
@@ -299,14 +305,8 @@
     </div>
 
     <script>
-        const hour = new Date().getHours();
-        const autoTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', autoTheme);
-
-        const TRANSLATION_OVERRIDES = {
-            "WOKE": "覺醒的; 醒來(wake過去式)",
-        };
-
+        // --- 核心變數初始化 ---
+        const TRANSLATION_OVERRIDES = { "WOKE": "覺醒的; 醒來(wake過去式)" };
         let cloudDict = { 3: [], 4: [], 5: [], 6: [] }; 
         let wordSet = new Set(); 
         
@@ -323,15 +323,44 @@
         
         let currentHintWord = null;
         let revealedHints = {};
-        
         let recentPuzzles = []; 
 
-        let highScores = JSON.parse(localStorage.getItem('speedle_hs_v4'));
-        if (!highScores) {
-            highScores = {
-                level: { 3: 1, 4: 1, 5: 1, 6: 1 }, 
-                endless: { 3: 0, 4: 0, 5: 0, 6: 0 }
-            };
+        // --- 系統主題載入與設定 ---
+        function applyTheme(theme) {
+            if (theme === 'auto') {
+                const hour = new Date().getHours();
+                document.documentElement.setAttribute('data-theme', (hour >= 6 && hour < 18) ? 'light' : 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        }
+        let currentTheme = localStorage.getItem('speedle_theme') || 'auto';
+        applyTheme(currentTheme);
+        
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            if (btn.getAttribute('data-theme-val') === currentTheme) {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentTheme = e.target.getAttribute('data-theme-val');
+                localStorage.setItem('speedle_theme', currentTheme);
+                applyTheme(currentTheme);
+            });
+        });
+
+        // --- 最高分紀錄 (加入格數分類機制) ---
+        let highScores = JSON.parse(localStorage.getItem('speedle_hs_v5'));
+        if (!highScores) { highScores = { level: {}, endless: {} }; }
+        
+        function getHsKey() {
+            let blanks = fixPattern.filter(p => !p).length;
+            return `${targetLength}_${blanks}`;
+        }
+        function getScore(mode, key) { 
+            return highScores[mode][key] || (mode === 'level' ? 1 : 0); 
         }
 
         async function fetchDictionary() {
@@ -344,26 +373,22 @@
                 rawWords.forEach(word => {
                     if (word.length >= 3 && word.length <= 6) { 
                         if (!/[AEIOUY]/.test(word)) return;
-                        
                         if (word.endsWith('S') && !word.endsWith('SS')) {
                             if (rawSet.has(word.slice(0, -1))) return; 
                             if (word.endsWith('ES') && rawSet.has(word.slice(0, -2))) return; 
                         }
-                        
                         cloudDict[word.length].push(word); 
                         wordSet.add(word); 
                     }
                 });
 
                 document.getElementById('loading-msg').style.display = 'none';
-                updateHighScoresUI();
                 renderPatternSelector(); 
                 document.getElementById('mode-cards').classList.add('ready');
             } catch (error) { document.getElementById('loading-msg').textContent = "字典載入失敗，請重整"; }
         }
         window.onload = fetchDictionary;
 
-        // 修改點：將英文釋義作為物件回傳，以供後續建立按鈕使用
         async function getTranslation(word) {
             if (TRANSLATION_OVERRIDES[word]) return { zh: TRANSLATION_OVERRIDES[word], en: "" };
             
@@ -379,11 +404,8 @@
                     const wikiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${word}`);
                     if (wikiRes.ok) {
                         const wikiData = await wikiRes.json();
-                        if (wikiData.description) {
-                            enDef = "Wiki: " + wikiData.description;
-                        } else if (wikiData.extract) {
-                            enDef = "Wiki: " + wikiData.extract.split('.')[0] + '.';
-                        }
+                        if (wikiData.description) enDef = "Wiki: " + wikiData.description;
+                        else if (wikiData.extract) enDef = "Wiki: " + wikiData.extract.split('.')[0] + '.';
                     }
                 }
             } catch(e) {}
@@ -398,24 +420,36 @@
                     const res2 = await fetch(`https://api.mymemory.translated.net/get?q=${word}&langpair=en|zh-TW`);
                     const data2 = await res2.json();
                     zhText = (data2.responseData.translatedText.toUpperCase() !== word) ? data2.responseData.translatedText : "(無中文釋義)";
-                } catch {
-                    zhText = "(翻譯異常)"; 
-                }
+                } catch { zhText = "(翻譯異常)"; }
             }
-            
             return { zh: zhText, en: enDef };
         }
 
         function updateHighScoresUI() {
-            document.getElementById('hs-level').textContent = `第 ${highScores.level[targetLength]} 關`;
-            document.getElementById('hs-endless').textContent = `${highScores.endless[targetLength]} 分`;
+            let key = getHsKey();
+            document.getElementById('badge-level').textContent = `最高紀錄: 第 ${getScore('level', key)} 關`;
+            document.getElementById('badge-endless').textContent = `最高紀錄: ${getScore('endless', key)} 分`;
+            
+            document.getElementById('level-desc').textContent = `每關需找出 3 個 ${targetLength} 字詞，時間遞減`;
+            document.getElementById('practice-desc').textContent = `無時間限制，輕鬆突破 ${targetLength} 字題庫`;
         }
 
         function saveHighScore() {
-            if (gameMode === 'level' && level > highScores.level[targetLength]) highScores.level[targetLength] = level;
-            if (gameMode === 'endless' && score > highScores.endless[targetLength]) highScores.endless[targetLength] = score;
-            localStorage.setItem('speedle_hs_v4', JSON.stringify(highScores));
+            let key = getHsKey();
+            if (gameMode === 'level' && level > getScore('level', key)) highScores.level[key] = level;
+            if (gameMode === 'endless' && score > getScore('endless', key)) highScores.endless[key] = score;
+            localStorage.setItem('speedle_hs_v5', JSON.stringify(highScores));
             updateHighScoresUI();
+        }
+
+        // --- 動態浮動文字特效 ---
+        function showFloatingAnim(text, color) {
+            const el = document.createElement('div');
+            el.className = 'floating-score show';
+            el.style.color = color;
+            el.textContent = text;
+            document.getElementById('board-container').appendChild(el);
+            setTimeout(() => el.remove(), 1000); // 動畫跑完自動銷毀
         }
 
         function initAudio() {
@@ -442,14 +476,9 @@
         }
 
         function usePass() {
-            score--;
-            wrongAttempts = 0;
+            score--; wrongAttempts = 0;
             document.getElementById('score').textContent = score;
-            
-            const minusEl = document.getElementById('minus-score');
-            minusEl.textContent = "-1";
-            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
-            
+            showFloatingAnim("-1", "var(--error-color)");
             showMessage("使用 Pass！扣 1 分");
             document.getElementById('pass-btn').style.display = 'none';
             forceNextPuzzle();
@@ -465,10 +494,10 @@
                     let newPattern = [...fixPattern];
                     newPattern[i] = !newPattern[i];
                     let fixedCount = newPattern.filter(x => x).length;
-                    
                     if (fixedCount > 0 && fixedCount < targetLength) {
                         fixPattern[i] = !fixPattern[i];
                         renderPatternSelector();
+                        updateHighScoresUI();
                     }
                 });
                 container.appendChild(box);
@@ -507,7 +536,6 @@
             });
         });
 
-        document.getElementById('theme-btn').addEventListener('click', () => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
         document.getElementById('mute-btn').addEventListener('click', (e) => { isMuted = !isMuted; e.target.textContent = isMuted ? '🔇' : '🔊'; });
         document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.add('show'); });
         document.getElementById('pause-btn').addEventListener('click', togglePause);
@@ -551,8 +579,6 @@
         }
 
         function generatePuzzle() {
-            document.getElementById('plus-one').classList.remove('show');
-
             const words = cloudDict[targetLength];
             let map = {};
             
@@ -568,11 +594,14 @@
             let blanksCount = fixPattern.filter(p => !p).length;
             let minRequired = blanksCount === 1 ? 3 : 5; 
             
+            // 修復換局 Bug：嚴格確保 validKeys 生成的兩階段降級
             let validKeys = Object.keys(map).filter(k => map[k].length >= minRequired && !recentPuzzles.includes(k));
-            if (validKeys.length === 0) validKeys = Object.keys(map).filter(k => !recentPuzzles.includes(k));
             if (validKeys.length === 0) {
-                validKeys = Object.keys(map);
+                validKeys = Object.keys(map).filter(k => map[k].length >= minRequired);
                 recentPuzzles = []; 
+            }
+            if (validKeys.length === 0) {
+                validKeys = Object.keys(map); // 最後防線
             }
             
             let randomKey = validKeys[Math.floor(Math.random() * validKeys.length)];
@@ -588,10 +617,8 @@
                 }
             }
             
-            userInput = ""; 
-            submittedWords.clear();
-            currentHintWord = null; revealedHints = {};
-            wrongAttempts = 0;
+            userInput = ""; submittedWords.clear();
+            currentHintWord = null; revealedHints = {}; wrongAttempts = 0;
             
             document.getElementById('message').textContent = ""; 
             document.getElementById('hint-btn').style.display = 'inline-block';
@@ -692,9 +719,7 @@
 
             score -= 2;
             document.getElementById('score').textContent = score;
-            const minusEl = document.getElementById('minus-score');
-            minusEl.textContent = "-2";
-            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
+            showFloatingAnim("-2", "var(--error-color)");
 
             showMessage("查詢中文提示中... (-2 分)");
             let wordToTranslate = currentHintWord;
@@ -737,9 +762,7 @@
 
             score -= 1;
             document.getElementById('score').textContent = score;
-            const minusEl = document.getElementById('minus-score');
-            minusEl.textContent = "-1";
-            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
+            showFloatingAnim("-1", "var(--error-color)");
 
             showMessage("獲得字母提示！ (-1 分)");
 
@@ -854,8 +877,7 @@
             
             addWordToHistory(word);
 
-            const plusOne = document.getElementById('plus-one');
-            plusOne.classList.remove('show'); void plusOne.offsetWidth; plusOne.classList.add('show');
+            showFloatingAnim("+1", "var(--wordle-green)");
             
             currentHintWord = null;
             revealedHints = {};
@@ -911,12 +933,16 @@
 
         async function addWordToHistory(word, isMissed = false) {
             const list = document.getElementById('word-list');
-            const itemDiv = document.createElement('div'); itemDiv.classList.add('submitted-item');
             
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.className = 'history-wrapper';
             if (isMissed) {
-                itemDiv.style.opacity = '0.7';
-                itemDiv.style.border = '1px dashed var(--wordle-yellow)';
+                wrapperDiv.style.opacity = '0.7';
+                wrapperDiv.style.border = '1px dashed var(--wordle-yellow)';
             }
+            
+            const mainRow = document.createElement('div');
+            mainRow.className = 'history-main-row';
             
             const miniBoard = document.createElement('div'); miniBoard.classList.add('mini-board');
             for(let i=0; i<word.length; i++) {
@@ -928,27 +954,44 @@
             
             const defSpan = document.createElement('span'); defSpan.classList.add('definition'); defSpan.textContent = "翻譯中...";
             
+            const actionGrp = document.createElement('div');
+            actionGrp.style.display = 'flex'; actionGrp.style.gap = '5px'; actionGrp.style.flexShrink = '0';
+            
             const yahooLink = document.createElement('a');
             yahooLink.href = `https://tw.dictionary.search.yahoo.com/search?p=${word}`;
             yahooLink.target = "_blank"; yahooLink.classList.add('yahoo-link'); yahooLink.textContent = "查字典";
 
-            itemDiv.appendChild(miniBoard); 
-            itemDiv.appendChild(defSpan); 
+            mainRow.appendChild(miniBoard); 
+            mainRow.appendChild(defSpan);
             
-            // 隱藏式的英釋按鈕 (如果有抓到英文定義的話)
             let resultObj = await getTranslation(word);
             defSpan.textContent = resultObj.zh;
+            
+            // 需求 6：優雅的底部展開英釋按鈕
             if (resultObj.en) {
                 const enLink = document.createElement('a');
                 enLink.className = 'yahoo-link';
                 enLink.textContent = '英釋';
-                enLink.style.cursor = 'pointer';
-                enLink.onclick = () => alert(`[ ${word} ]\n${resultObj.en}`);
-                itemDiv.appendChild(enLink);
+                
+                const enDiv = document.createElement('div');
+                enDiv.className = 'en-def-box';
+                enDiv.textContent = resultObj.en;
+                
+                enLink.onclick = () => {
+                    enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
+                };
+                
+                actionGrp.appendChild(enLink);
+                wrapperDiv.appendChild(mainRow);
+                wrapperDiv.appendChild(enDiv);
+            } else {
+                wrapperDiv.appendChild(mainRow);
             }
             
-            itemDiv.appendChild(yahooLink); 
-            list.prepend(itemDiv);
+            actionGrp.appendChild(yahooLink);
+            mainRow.appendChild(actionGrp);
+            
+            list.prepend(wrapperDiv);
         }
 
         function appendMissedWords() {
