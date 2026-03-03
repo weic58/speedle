@@ -45,10 +45,10 @@
         .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 500px; z-index: 2; height: 100%; }
         .screen.active { display: flex; }
 
-        /* --- 美化首頁 --- */
-        #setup-screen { gap: 15px; margin-top: 10px; width: 100%; height: auto; }
+        /* --- 修改點 1：首頁美化與可滑動 --- */
+        #setup-screen { gap: 15px; margin-top: 10px; width: 100%; height: 100%; overflow-y: auto; padding-bottom: 50px; justify-content: flex-start; }
         .loading-text { font-size: 1.2rem; color: var(--accent-color); font-weight: bold; margin-bottom: 10px; }
-        .mode-cards { display: flex; flex-direction: column; gap: 15px; width: 100%; opacity: 0; pointer-events: none; transition: 0.5s; }
+        .mode-cards { display: flex; flex-direction: column; gap: 15px; width: 100%; opacity: 0; pointer-events: none; transition: 0.5s; flex-shrink: 0; }
         .mode-cards.ready { opacity: 1; pointer-events: auto; }
         
         .mode-card {
@@ -64,7 +64,6 @@
         .card-level { background: linear-gradient(135deg, #f39c12, #d35400); }
         .card-endless { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .card-practice { background: linear-gradient(135deg, #2ecc71, #27ae60); }
-        /* 新增：字典查詢卡片樣式 */
         .card-query { background: linear-gradient(135deg, #34495e, #2c3e50); }
 
         /* --- 設定齒輪 Modal --- */
@@ -73,12 +72,13 @@
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .len-btn, .kb-size-btn, .time-btn, .theme-btn { 
+        /* 增加 dict-btn 共用樣式 */
+        .len-btn, .kb-size-btn, .time-btn, .theme-btn, .dict-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
             min-width: 65px;
         }
-        .len-btn.active, .kb-size-btn.active, .time-btn.active, .theme-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
+        .len-btn.active, .kb-size-btn.active, .time-btn.active, .theme-btn.active, .dict-btn.active { background-color: var(--accent-color); border-color: var(--accent-color); color: white; }
         
         .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
         .pattern-box {
@@ -123,7 +123,6 @@
         .tile.error { background-color: var(--error-color) !important; border-color: var(--error-color) !important; color: white; }
         .board-success .tile { background-color: var(--wordle-green); border-color: var(--wordle-green); color: white; }
 
-        /* --- 查詢模式格子樣式 --- */
         .query-tile {
             width: 60px; height: 60px; border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center;
             font-size: 2rem; font-weight: bold; text-transform: uppercase; background-color: var(--bg-color);
@@ -148,6 +147,10 @@
 
         /* --- 單字歷史列表 --- */
         #word-list { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; z-index: 2; flex-grow: 1; max-height: none; margin-bottom: 10px; }
+        
+        /* 修改點 2：給 query-results 下方加上大 padding 以避開鍵盤 */
+        #query-results { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 250px; flex-grow: 1; }
+        
         .history-wrapper { display: flex; flex-direction: column; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; flex-shrink: 0; gap: 5px; }
         .history-main-row { display: flex; align-items: center; gap: 15px; }
         .mini-board { display: flex; gap: 3px; flex-shrink: 0; }
@@ -159,11 +162,11 @@
         .en-def-box { display: none; font-size: 0.9rem; color: var(--wordle-yellow); padding-top: 5px; border-top: 1px dashed var(--border-color); }
 
         /* --- 手機虛擬鍵盤 --- */
+        #keyboard-container { width: 100%; display: flex; justify-content: center; position: absolute; bottom: 0; z-index: 5; pointer-events: none; }
         #keyboard { 
             width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 6px; 
-            margin-top: auto; 
             padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px); 
-            z-index: 2; flex-shrink: 0; 
+            z-index: 2; flex-shrink: 0; pointer-events: auto; background-color: var(--bg-color);
         }
         .kb-row { display: flex; justify-content: center; gap: 6px; }
         .kb-key {
@@ -249,7 +252,7 @@
             </button>
         </div>
 
-        <div style="margin-top: 30px; font-size: 0.85rem; color: var(--def-color); text-align: center;">
+        <div style="margin-top: 30px; flex-shrink: 0; font-size: 0.85rem; color: var(--def-color); text-align: center;">
             Created by weic58 & Gemini, 2026.<br>v3.2
         </div>
     </div>
@@ -268,6 +271,13 @@
 
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">點亮要固定的字母位置:</label>
             <div id="pattern-selector" class="pattern-selector"></div>
+
+            <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">查字典連結:</label>
+            <div class="length-selector" id="dict-selector">
+                <button class="dict-btn active" data-dict="yahoo">奇摩</button>
+                <button class="dict-btn" data-dict="cambridge">劍橋</button>
+                <button class="dict-btn" data-dict="merriam">韋氏</button>
+            </div>
 
             <div class="switch-container">
                 <span class="switch-label">自動切換亮暗主題 (依時間)</span>
@@ -334,10 +344,10 @@
             <button onclick="clearQuery()" style="flex: 1; background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 12px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; font-weight: bold;">清空</button>
         </div>
 
-        <div id="query-results" style="width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px; flex-grow: 1;"></div>
+        <div id="query-results"></div>
     </div>
 
-    <div id="keyboard-container" style="width: 100%; display: flex; justify-content: center; position: absolute; bottom: 0; z-index: 5;">
+    <div id="keyboard-container">
         <div id="keyboard" class="kb-md" style="display: none;">
             <div class="kb-row">
                 <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button><button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button><button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button><button class="kb-key">P</button>
@@ -369,7 +379,6 @@
     </div>
 
     <script>
-        // --- 系統主題載入與設定 (包含滑桿與手動按鈕邏輯) ---
         let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; 
         let savedManualTheme = localStorage.getItem('speedle_manual_theme') || 'dark';
 
@@ -407,6 +416,27 @@
             localStorage.setItem('speedle_manual_theme', savedManualTheme);
             updateTheme();
         });
+
+        // --- 字典引擎設定 ---
+        let currentDictProvider = localStorage.getItem('speedle_dict_provider') || 'yahoo';
+        document.querySelectorAll('.dict-btn').forEach(btn => {
+            if (btn.getAttribute('data-dict') === currentDictProvider) {
+                document.querySelectorAll('.dict-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.dict-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentDictProvider = e.target.getAttribute('data-dict');
+                localStorage.setItem('speedle_dict_provider', currentDictProvider);
+            });
+        });
+
+        function getDictUrl(word) {
+            if (currentDictProvider === 'cambridge') return `https://dictionary.cambridge.org/dictionary/english-chinese-traditional/${word}`;
+            if (currentDictProvider === 'merriam') return `https://www.merriam-webster.com/dictionary/${word}`;
+            return `https://tw.dictionary.search.yahoo.com/search?p=${word}`;
+        }
 
         const TRANSLATION_OVERRIDES = { "WOKE": "覺醒的; 醒來(wake過去式)" };
         let cloudDict = { 3: [], 4: [], 5: [], 6: [] }; 
@@ -450,10 +480,8 @@
                 rawWords.forEach(word => {
                     if (word.length >= 3 && word.length <= 6) { 
                         if (!/[AEIOUY]/.test(word)) return;
-                        
                         if (/[^AEIOUY]{4}/.test(word)) return; 
                         if (word.length === 4 && /[^AEIOUY]{3}/.test(word) && !/(CH|SH|TH|GH|PH|CK|NG)/.test(word)) return; 
-                        
                         if (word.endsWith('S') && !word.endsWith('SS')) {
                             if (rawSet.has(word.slice(0, -1))) return; 
                             if (word.endsWith('ES') && rawSet.has(word.slice(0, -2))) return; 
@@ -807,7 +835,7 @@
             }
         }
 
-        // --- 新增：字典查詢模式 ---
+        // --- 字典查詢模式 ---
         let queryLength = 4;
         let queryPattern = ["", "", "", ""];
         let queryActiveIndex = 0;
@@ -880,37 +908,99 @@
                 return;
             }
             
-            resContainer.innerHTML = `<div style='text-align:center; margin-bottom:10px; color:var(--wordle-yellow);'>找到 ${results.length} 個可能單字：</div>`;
+            let displayCount = Math.min(results.length, 30);
+            let summaryText = `找到 ${results.length} 個可能單字`;
+            if (results.length > 30) summaryText += ` (僅顯示前 30 筆防卡頓)`;
             
-            let resultFlex = document.createElement('div');
-            resultFlex.style.display = 'flex';
-            resultFlex.style.flexWrap = 'wrap';
-            resultFlex.style.gap = '10px';
-            resultFlex.style.justifyContent = 'center';
+            resContainer.innerHTML = `<div style='text-align:center; margin-bottom:10px; color:var(--wordle-yellow);'>${summaryText}：</div>`;
             
-            results.forEach(w => {
-                let wordPill = document.createElement('div');
-                wordPill.style.backgroundColor = 'var(--panel-bg)';
-                wordPill.style.padding = '8px 12px';
-                wordPill.style.borderRadius = '6px';
-                wordPill.style.fontWeight = 'bold';
-                wordPill.style.border = '1px solid var(--border-color)';
-                wordPill.textContent = w;
-                
-                wordPill.style.cursor = 'pointer';
-                wordPill.onclick = async () => {
-                    wordPill.textContent = "翻譯中...";
-                    let trans = await getTranslation(w);
-                    wordPill.innerHTML = `${w} <span style="color:var(--wordle-yellow); font-size:0.85rem; margin-left:5px;">${trans.zh}</span>`;
-                };
-                
-                resultFlex.appendChild(wordPill);
+            results.slice(0, displayCount).forEach(w => {
+                resContainer.appendChild(createWordBlock(w, false, false));
             });
-            
-            resContainer.appendChild(resultFlex);
         }
 
-        // --- 結束新增 ---
+        // --- 共用區塊生成函數 ---
+        function createWordBlock(word, isMissed = false, autoTranslate = true) {
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.className = 'history-wrapper';
+            if (isMissed) {
+                wrapperDiv.style.opacity = '0.7';
+                wrapperDiv.style.border = '1px dashed var(--wordle-yellow)';
+            }
+            
+            const mainRow = document.createElement('div');
+            mainRow.className = 'history-main-row';
+            
+            const miniBoard = document.createElement('div'); miniBoard.classList.add('mini-board');
+            for(let i=0; i<word.length; i++) {
+                const t = document.createElement('div'); t.classList.add('mini-tile');
+                t.textContent = word[i];
+                if (isMissed) t.style.backgroundColor = 'var(--wordle-gray)';
+                miniBoard.appendChild(t);
+            }
+            
+            const defSpan = document.createElement('span'); defSpan.classList.add('definition');
+            
+            const actionGrp = document.createElement('div');
+            actionGrp.style.display = 'flex'; actionGrp.style.gap = '5px'; actionGrp.style.flexShrink = '0';
+            
+            const dictLink = document.createElement('a');
+            dictLink.href = getDictUrl(word);
+            dictLink.target = "_blank"; dictLink.classList.add('yahoo-link'); dictLink.textContent = "查字典";
+
+            mainRow.appendChild(miniBoard); 
+            mainRow.appendChild(defSpan);
+
+            const handleTranslation = async () => {
+                let resultObj = await getTranslation(word);
+                defSpan.textContent = resultObj.zh;
+                defSpan.style.cursor = 'default';
+                defSpan.style.color = 'var(--def-color)';
+                defSpan.onclick = null;
+                
+                if (resultObj.en) {
+                    const enLink = document.createElement('a');
+                    enLink.className = 'yahoo-link';
+                    enLink.textContent = '英釋';
+                    
+                    const enDiv = document.createElement('div');
+                    enDiv.className = 'en-def-box';
+                    enDiv.textContent = resultObj.en;
+                    
+                    enLink.onclick = () => {
+                        enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
+                    };
+                    
+                    actionGrp.insertBefore(enLink, dictLink);
+                    wrapperDiv.appendChild(enDiv);
+                }
+            };
+
+            if (autoTranslate) {
+                defSpan.textContent = "翻譯中...";
+                handleTranslation();
+            } else {
+                defSpan.textContent = "點擊翻譯";
+                defSpan.style.cursor = 'pointer';
+                defSpan.style.color = 'var(--accent-color)';
+                defSpan.onclick = () => {
+                    defSpan.textContent = "翻譯中...";
+                    defSpan.style.color = 'var(--def-color)';
+                    handleTranslation();
+                };
+            }
+
+            actionGrp.appendChild(dictLink);
+            mainRow.appendChild(actionGrp);
+            wrapperDiv.appendChild(mainRow);
+
+            return wrapperDiv;
+        }
+
+        function addWordToHistory(word, isMissed = false) {
+            const list = document.getElementById('word-list');
+            list.prepend(createWordBlock(word, isMissed, true));
+        }
 
         document.getElementById('hint-zh-btn').addEventListener('click', async () => {
             if(document.activeElement) document.activeElement.blur();
@@ -991,7 +1081,6 @@
         });
 
         async function handleInput(e) {
-            // 新增：字典查詢模式的鍵盤攔截
             if (gameMode === 'query' && document.getElementById('query-screen').classList.contains('active')) {
                 if (e.key === 'Enter') {
                     if(e.preventDefault) e.preventDefault();
@@ -1119,6 +1208,8 @@
             
             addWordToHistory(word);
 
+            showFloatingAnim("+1", "var(--wordle-green)");
+            
             currentHintWord = null;
             revealedHints = {};
             document.getElementById('hint-btn').style.display = 'inline-block';
@@ -1169,68 +1260,6 @@
                     }
                 }
             }, 500); 
-        }
-
-        async function addWordToHistory(word, isMissed = false) {
-            const list = document.getElementById('word-list');
-            
-            const wrapperDiv = document.createElement('div');
-            wrapperDiv.className = 'history-wrapper';
-            if (isMissed) {
-                wrapperDiv.style.opacity = '0.7';
-                wrapperDiv.style.border = '1px dashed var(--wordle-yellow)';
-            }
-            
-            const mainRow = document.createElement('div');
-            mainRow.className = 'history-main-row';
-            
-            const miniBoard = document.createElement('div'); miniBoard.classList.add('mini-board');
-            for(let i=0; i<word.length; i++) {
-                const t = document.createElement('div'); t.classList.add('mini-tile');
-                t.textContent = word[i];
-                if (isMissed) t.style.backgroundColor = 'var(--wordle-gray)';
-                miniBoard.appendChild(t);
-            }
-            
-            const defSpan = document.createElement('span'); defSpan.classList.add('definition'); defSpan.textContent = "翻譯中...";
-            
-            const actionGrp = document.createElement('div');
-            actionGrp.style.display = 'flex'; actionGrp.style.gap = '5px'; actionGrp.style.flexShrink = '0';
-            
-            const yahooLink = document.createElement('a');
-            yahooLink.href = `https://tw.dictionary.search.yahoo.com/search?p=${word}`;
-            yahooLink.target = "_blank"; yahooLink.classList.add('yahoo-link'); yahooLink.textContent = "查字典";
-
-            mainRow.appendChild(miniBoard); 
-            mainRow.appendChild(defSpan);
-            
-            let resultObj = await getTranslation(word);
-            defSpan.textContent = resultObj.zh;
-            
-            if (resultObj.en) {
-                const enLink = document.createElement('a');
-                enLink.className = 'yahoo-link';
-                enLink.textContent = '英釋';
-                
-                const enDiv = document.createElement('div');
-                enDiv.className = 'en-def-box';
-                enDiv.textContent = resultObj.en;
-                
-                enLink.onclick = () => {
-                    enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
-                };
-                
-                actionGrp.appendChild(enLink);
-                wrapperDiv.appendChild(mainRow);
-                wrapperDiv.appendChild(enDiv);
-            } else {
-                wrapperDiv.appendChild(mainRow);
-            }
-            
-            actionGrp.appendChild(yahooLink);
-            mainRow.appendChild(actionGrp);
-            
-            list.prepend(wrapperDiv);
         }
 
         function appendMissedWords() {
