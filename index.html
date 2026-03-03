@@ -318,7 +318,7 @@
     </div>
 
     <script>
-        // --- 系統主題載入與設定 (包含滑桿與手動按鈕邏輯) ---
+        // --- 系統主題載入與設定 ---
         let isAutoTheme = localStorage.getItem('speedle_auto_theme') !== 'false'; 
         let savedManualTheme = localStorage.getItem('speedle_manual_theme') || 'dark';
 
@@ -370,7 +370,6 @@
         let submittedWords = new Set();
         let wrongAttempts = 0;
         
-        // 新增 isChecking 防止快速連續按 Enter 卡死 API，確保全域變數重置
         let isGameOver = false, isPaused = false, isAnimating = false, isChecking = false;
         let timerInterval, idleTimer;
         let isMuted = false, audioCtx;
@@ -400,6 +399,11 @@
                 rawWords.forEach(word => {
                     if (word.length >= 3 && word.length <= 6) { 
                         if (!/[AEIOUY]/.test(word)) return;
+                        
+                        // 神級縮寫過濾器
+                        if (/[^AEIOUY]{4}/.test(word)) return; // 阻擋 4 個連續子音 (如 CTRL)
+                        if (word.length === 4 && /[^AEIOUY]{3}/.test(word) && !/(CH|SH|TH|GH|PH|CK|NG)/.test(word)) return; // 精準剔除 4 字縮寫 (EXCL, ESRL)
+                        
                         if (word.endsWith('S') && !word.endsWith('SS')) {
                             if (rawSet.has(word.slice(0, -1))) return; 
                             if (word.endsWith('ES') && rawSet.has(word.slice(0, -2))) return; 
@@ -455,7 +459,7 @@
 
         function updateHighScoresUI() {
             let key = getHsKey();
-            let litCount = fixPattern.filter(p => p).length; // 修改：顯示亮幾格
+            let litCount = fixPattern.filter(p => p).length; 
             document.getElementById('badge-level').textContent = `最高紀錄 (亮 ${litCount} 格): 第 ${getScore('level', key)} 關`;
             document.getElementById('badge-endless').textContent = `最高紀錄 (亮 ${litCount} 格): ${getScore('endless', key)} 分`;
             
@@ -688,7 +692,6 @@
         function startGame(mode) {
             if(document.activeElement) document.activeElement.blur(); 
             
-            // 強制重置所有狀態，避免跨局鎖死
             initAudio(); gameMode = mode; 
             score = 0; level = 1; wordsInCurrentLevel = 0; 
             isGameOver = false; isPaused = false; isAnimating = false; isChecking = false;
@@ -831,7 +834,6 @@
         });
 
         async function handleInput(e) {
-            // 防呆鎖定：增加 isChecking 防止 API 延遲時瘋狂觸發
             if (isGameOver || isPaused || isAnimating || isChecking || !document.getElementById('game-screen').classList.contains('active')) return;
             
             if (e.key === 'Enter') {
@@ -899,7 +901,7 @@
             let blanksCount = puzzlePattern.filter(p => p === null).length;
             if (userInput.length !== blanksCount) { showMessage("字數不足！"); shakeError(); return; }
             
-            isChecking = true; // 鎖死鍵盤，防止在 API 回傳前重複送出或亂刪
+            isChecking = true; 
             
             let fullWord = "";
             let uIdx = 0;
@@ -913,7 +915,6 @@
             let isValid = wordSet.has(fullWord);
             if (!isValid) {
                 try {
-                    // 加入 3 秒強制中斷，避免外國 API 伺服器掛掉導致你的網頁永久卡死
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 3000);
                     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${fullWord}`, { signal: controller.signal });
@@ -924,7 +925,7 @@
 
             if (!isValid) { showMessage("字典裡查無此字！"); shakeError(); isChecking = false; return; }
 
-            isChecking = false; // 解除鎖定，交給 handleSuccess 的動畫鎖
+            isChecking = false;
             handleSuccess(fullWord);
         }
 
@@ -956,7 +957,7 @@
             let forceNext = (possibleRemaining.length === 0);
 
             setTimeout(() => {
-                isAnimating = false; // 絕對解除鎖定
+                isAnimating = false; 
                 if (isGameOver) return; 
 
                 boardEl.classList.remove('board-success');
@@ -1076,7 +1077,7 @@
             divider.style.margin = '15px 0 5px 0';
             divider.style.fontSize = '0.9rem';
             divider.style.fontWeight = 'bold';
-            divider.textContent = "--- 未猜出的可能單字 ---";
+            divider.textContent = "--- 參考答案 ---";
             
             missedWords.reverse().forEach(word => {
                 addWordToHistory(word, true);
