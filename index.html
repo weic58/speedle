@@ -45,7 +45,7 @@
         .screen { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 500px; z-index: 2; height: 100%; }
         .screen.active { display: flex; }
 
-        /* --- 修改點 1：首頁美化與可滑動 --- */
+        /* --- 首頁 --- */
         #setup-screen { gap: 15px; margin-top: 10px; width: 100%; height: 100%; overflow-y: auto; padding-bottom: 50px; justify-content: flex-start; }
         .loading-text { font-size: 1.2rem; color: var(--accent-color); font-weight: bold; margin-bottom: 10px; }
         .mode-cards { display: flex; flex-direction: column; gap: 15px; width: 100%; opacity: 0; pointer-events: none; transition: 0.5s; flex-shrink: 0; }
@@ -72,7 +72,6 @@
         .settings-box { background-color: var(--panel-bg); padding: 30px; border-radius: 12px; width: 80%; max-width: 350px; text-align: center; border: 1px solid var(--border-color); max-height: 80vh; overflow-y: auto; }
         
         .length-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        /* 增加 dict-btn 共用樣式 */
         .len-btn, .kb-size-btn, .time-btn, .theme-btn, .dict-btn { 
             flex: 1 1 20%; background-color: var(--bg-color); color: var(--text-color); border: 2px solid var(--border-color);
             padding: 10px 0; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: 0.2s;
@@ -123,6 +122,10 @@
         .tile.error { background-color: var(--error-color) !important; border-color: var(--error-color) !important; color: white; }
         .board-success .tile { background-color: var(--wordle-green); border-color: var(--wordle-green); color: white; }
 
+        /* --- 查詢模式專用設定 (修改點2) --- */
+        #query-screen { gap: 15px; margin-top: 10px; width: 100%; height: 100%; overflow-y: auto; padding-bottom: 300px; justify-content: flex-start; }
+        #query-results { width: 100%; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        
         .query-tile {
             width: 60px; height: 60px; border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center;
             font-size: 2rem; font-weight: bold; text-transform: uppercase; background-color: var(--bg-color);
@@ -147,10 +150,6 @@
 
         /* --- 單字歷史列表 --- */
         #word-list { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; z-index: 2; flex-grow: 1; max-height: none; margin-bottom: 10px; }
-        
-        /* 修改點 2：給 query-results 下方加上大 padding 以避開鍵盤 */
-        #query-results { width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 250px; flex-grow: 1; }
-        
         .history-wrapper { display: flex; flex-direction: column; background-color: var(--panel-bg); padding: 10px; border-radius: 6px; animation: fadein 0.3s; flex-shrink: 0; gap: 5px; }
         .history-main-row { display: flex; align-items: center; gap: 15px; }
         .mini-board { display: flex; gap: 3px; flex-shrink: 0; }
@@ -297,8 +296,8 @@
             <label style="display:block; text-align:left; margin-bottom:10px; font-weight:bold;">鍵盤大小:</label>
             <div class="length-selector" id="kb-size-selector">
                 <button class="kb-size-btn" data-size="kb-sm">小</button>
-                <button class="kb-size-btn active" data-size="kb-md">中</button>
-                <button class="kb-size-btn" data-size="kb-lg">大</button>
+                <button class="kb-size-btn" data-size="kb-md">中</button>
+                <button class="kb-size-btn active" data-size="kb-lg">大</button>
             </div>
 
             <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('show')">完成</button>
@@ -348,7 +347,7 @@
     </div>
 
     <div id="keyboard-container">
-        <div id="keyboard" class="kb-md" style="display: none;">
+        <div id="keyboard" class="kb-lg" style="display: none;">
             <div class="kb-row">
                 <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button><button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button><button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button><button class="kb-key">P</button>
             </div>
@@ -417,7 +416,6 @@
             updateTheme();
         });
 
-        // --- 字典引擎設定 ---
         let currentDictProvider = localStorage.getItem('speedle_dict_provider') || 'yahoo';
         document.querySelectorAll('.dict-btn').forEach(btn => {
             if (btn.getAttribute('data-dict') === currentDictProvider) {
@@ -967,8 +965,9 @@
                     enDiv.className = 'en-def-box';
                     enDiv.textContent = resultObj.en;
                     
+                    // 修改點 1：修正點擊邏輯，判定是否為 block 來隱藏，否則展開
                     enLink.onclick = () => {
-                        enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
+                        enDiv.style.display = enDiv.style.display === 'block' ? 'none' : 'block';
                     };
                     
                     actionGrp.insertBefore(enLink, dictLink);
