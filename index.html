@@ -190,8 +190,18 @@
     <header>
         <h1 onclick="quitToHome()" title="回首頁">SPEEDLE</h1>
         <div class="header-controls">
-            <button id="hint-zh-btn" class="icon-btn" title="中文提示 (-2分)" style="display: none;">📖</button>
-            <button id="hint-btn" class="icon-btn" title="給個提示 (-1分)" style="display: none;">💡</button>
+            <button id="hint-zh-btn" class="icon-btn" title="中文提示 (-2分)" style="display: none;">
+                <div style="display: flex; flex-direction: column; align-items: center; line-height: 1;">
+                    <span>📖</span>
+                    <span style="font-size: 0.65rem; margin-top: 4px; font-weight: bold; color: var(--def-color);">中文</span>
+                </div>
+            </button>
+            <button id="hint-btn" class="icon-btn" title="給個提示 (-1分)" style="display: none;">
+                <div style="display: flex; flex-direction: column; align-items: center; line-height: 1;">
+                    <span>💡</span>
+                    <span style="font-size: 0.65rem; margin-top: 4px; font-weight: bold; color: var(--def-color);">英文</span>
+                </div>
+            </button>
             <button id="restart-btn" class="icon-btn" title="重新開始" style="display: none;">🔄</button>
             <button id="pause-btn" class="icon-btn" title="暫停" style="display: none;">⏸️</button>
             <button id="mute-btn" class="icon-btn" title="切換音效">🔊</button>
