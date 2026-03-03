@@ -114,6 +114,9 @@
 
         .plus-one { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--wordle-green); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
         .plus-one.show { animation: floatUp 0.8s ease-out forwards; }
+        
+        .minus-score { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--error-color); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
+        .minus-score.show { animation: floatUp 0.8s ease-out forwards; }
 
         #message { height: 20px; font-weight: bold; color: var(--error-color); margin-bottom: 10px; z-index: 2; flex-shrink: 0; }
         
@@ -207,7 +210,7 @@
         </div>
 
         <div style="margin-top: 30px; font-size: 0.85rem; color: var(--def-color); text-align: center;">
-            Created by weic58 & Gemini, 2026.<br>v3
+            Created by weic58 & Gemini, 2026.<br>v3.1
         </div>
     </div>
 
@@ -258,6 +261,7 @@
 
         <div id="board-container">
             <div class="plus-one" id="plus-one">+1</div>
+            <div class="minus-score" id="minus-score"></div>
             <div id="board"></div>
         </div>
 
@@ -295,7 +299,6 @@
     </div>
 
     <script>
-        // 修改點 1：自動日夜主題 (網頁載入時執行)
         const hour = new Date().getHours();
         const autoTheme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', autoTheme);
@@ -333,7 +336,6 @@
 
         async function fetchDictionary() {
             try {
-                // 修改點 2：換回完整的 2 萬字庫，讓 DUNK 這種字可以自動納入
                 const res = await fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/20k.txt');
                 const text = await res.text();
                 const rawWords = text.split('\n').map(w => w.trim().toUpperCase());
@@ -361,9 +363,9 @@
         }
         window.onload = fetchDictionary;
 
-        // 修改點 3：建立翻譯小幫手，提供英英字典釋義作為救場
+        // 修改點：將英文釋義作為物件回傳，以供後續建立按鈕使用
         async function getTranslation(word) {
-            if (TRANSLATION_OVERRIDES[word]) return TRANSLATION_OVERRIDES[word];
+            if (TRANSLATION_OVERRIDES[word]) return { zh: TRANSLATION_OVERRIDES[word], en: "" };
             
             let enDef = "";
             try {
@@ -372,6 +374,16 @@
                     const dictData = await dictRes.json();
                     if (dictData[0] && dictData[0].meanings && dictData[0].meanings[0]) {
                         enDef = dictData[0].meanings[0].definitions[0].definition;
+                    }
+                } else {
+                    const wikiRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${word}`);
+                    if (wikiRes.ok) {
+                        const wikiData = await wikiRes.json();
+                        if (wikiData.description) {
+                            enDef = "Wiki: " + wikiData.description;
+                        } else if (wikiData.extract) {
+                            enDef = "Wiki: " + wikiData.extract.split('.')[0] + '.';
+                        }
                     }
                 }
             } catch(e) {}
@@ -391,8 +403,7 @@
                 }
             }
             
-            if (enDef) return `${zhText} (英釋: ${enDef})`;
-            return zhText;
+            return { zh: zhText, en: enDef };
         }
 
         function updateHighScoresUI() {
@@ -434,6 +445,11 @@
             score--;
             wrongAttempts = 0;
             document.getElementById('score').textContent = score;
+            
+            const minusEl = document.getElementById('minus-score');
+            minusEl.textContent = "-1";
+            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
+            
             showMessage("使用 Pass！扣 1 分");
             document.getElementById('pass-btn').style.display = 'none';
             forceNextPuzzle();
@@ -676,10 +692,17 @@
 
             score -= 2;
             document.getElementById('score').textContent = score;
+            const minusEl = document.getElementById('minus-score');
+            minusEl.textContent = "-2";
+            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
 
             showMessage("查詢中文提示中... (-2 分)");
-            let resultText = await getTranslation(currentHintWord);
-            showMessage(`中文提示: ${resultText}`);
+            let wordToTranslate = currentHintWord;
+            
+            let resultObj = await getTranslation(wordToTranslate);
+            if (currentHintWord === wordToTranslate) {
+                showMessage(`中文提示: ${resultObj.zh}`);
+            }
             playBeep(1000, 'triangle', 0.1);
         });
 
@@ -714,6 +737,10 @@
 
             score -= 1;
             document.getElementById('score').textContent = score;
+            const minusEl = document.getElementById('minus-score');
+            minusEl.textContent = "-1";
+            minusEl.classList.remove('show'); void minusEl.offsetWidth; minusEl.classList.add('show');
+
             showMessage("獲得字母提示！ (-1 分)");
 
             let pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
@@ -905,11 +932,23 @@
             yahooLink.href = `https://tw.dictionary.search.yahoo.com/search?p=${word}`;
             yahooLink.target = "_blank"; yahooLink.classList.add('yahoo-link'); yahooLink.textContent = "查字典";
 
-            itemDiv.appendChild(miniBoard); itemDiv.appendChild(defSpan); itemDiv.appendChild(yahooLink); list.prepend(itemDiv);
-
-            // 修改點 3：使用全新的 getTranslation 助理
-            let resultText = await getTranslation(word);
-            defSpan.innerHTML = resultText;
+            itemDiv.appendChild(miniBoard); 
+            itemDiv.appendChild(defSpan); 
+            
+            // 隱藏式的英釋按鈕 (如果有抓到英文定義的話)
+            let resultObj = await getTranslation(word);
+            defSpan.textContent = resultObj.zh;
+            if (resultObj.en) {
+                const enLink = document.createElement('a');
+                enLink.className = 'yahoo-link';
+                enLink.textContent = '英釋';
+                enLink.style.cursor = 'pointer';
+                enLink.onclick = () => alert(`[ ${word} ]\n${resultObj.en}`);
+                itemDiv.appendChild(enLink);
+            }
+            
+            itemDiv.appendChild(yahooLink); 
+            list.prepend(itemDiv);
         }
 
         function appendMissedWords() {
