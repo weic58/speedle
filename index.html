@@ -64,6 +64,8 @@
         .card-level { background: linear-gradient(135deg, #f39c12, #d35400); }
         .card-endless { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .card-practice { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        /* 新增：字典查詢卡片樣式 */
+        .card-query { background: linear-gradient(135deg, #34495e, #2c3e50); }
 
         /* --- 設定齒輪 Modal --- */
         #settings-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 30; opacity: 0; pointer-events: none; transition: 0.3s; }
@@ -88,7 +90,6 @@
             background-color: var(--wordle-green); border-color: var(--wordle-green);
         }
 
-        /* --- 滑桿開關樣式 (Toggle Switch) --- */
         .switch-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; text-align: left; }
         .switch-label { font-weight: bold; }
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
@@ -121,6 +122,18 @@
         .tile.hinted { color: var(--hint-color); opacity: 0.6; font-size: 1.8rem; }
         .tile.error { background-color: var(--error-color) !important; border-color: var(--error-color) !important; color: white; }
         .board-success .tile { background-color: var(--wordle-green); border-color: var(--wordle-green); color: white; }
+
+        /* --- 查詢模式格子樣式 --- */
+        .query-tile {
+            width: 60px; height: 60px; border: 2px solid var(--border-color); display: flex; justify-content: center; align-items: center;
+            font-size: 2rem; font-weight: bold; text-transform: uppercase; background-color: var(--bg-color);
+            transition: 0.2s; color: var(--text-color); cursor: pointer; border-radius: 6px;
+        }
+        .query-tile.active {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+            background-color: rgba(74, 144, 226, 0.1);
+        }
 
         .plus-one { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); color: var(--wordle-green); font-size: 2rem; font-weight: bold; opacity: 0; pointer-events: none; z-index: 10; }
         .plus-one.show { animation: floatUp 0.8s ease-out forwards; }
@@ -230,6 +243,10 @@
                 <h2>🧘 練習模式</h2>
                 <p id="practice-desc">無時間限制，輕鬆突破題庫</p>
             </button>
+            <button class="mode-card card-query" onclick="startQueryMode()">
+                <h2>🔎 字典查詢</h2>
+                <p>自訂字數與已知字母，尋找參考答案</p>
+            </button>
         </div>
 
         <div style="margin-top: 30px; font-size: 0.85rem; color: var(--def-color); text-align: center;">
@@ -296,8 +313,32 @@
 
         <div id="message"></div>
         <div id="word-list"></div>
+    </div>
 
-        <div id="keyboard" class="kb-md">
+    <div id="query-screen" class="screen">
+        <h2 style="margin-top: 0; margin-bottom: 20px;">字典查詢</h2>
+        
+        <div class="length-selector" id="query-len-selector" style="margin-bottom: 20px; width: 100%;">
+            <button class="len-btn" data-len="3">3字</button>
+            <button class="len-btn active" data-len="4">4字</button>
+            <button class="len-btn" data-len="5">5字</button>
+            <button class="len-btn" data-len="6">6字</button>
+        </div>
+        
+        <p style="font-size: 0.9rem; color: var(--def-color); margin-top: 0; margin-bottom: 10px;">點擊格子後，使用下方鍵盤輸入已知字母</p>
+        
+        <div id="query-board" style="display: flex; gap: 8px; margin-bottom: 20px;"></div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 300px;">
+            <button onclick="execQuery()" style="flex: 2; background-color: var(--accent-color); color: white; border: none; padding: 12px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; font-weight: bold;">查詢</button>
+            <button onclick="clearQuery()" style="flex: 1; background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 12px; font-size: 1.1rem; border-radius: 6px; cursor: pointer; font-weight: bold;">清空</button>
+        </div>
+
+        <div id="query-results" style="width: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 20px; flex-grow: 1;"></div>
+    </div>
+
+    <div id="keyboard-container" style="width: 100%; display: flex; justify-content: center; position: absolute; bottom: 0; z-index: 5;">
+        <div id="keyboard" class="kb-md" style="display: none;">
             <div class="kb-row">
                 <button class="kb-key">Q</button><button class="kb-key">W</button><button class="kb-key">E</button><button class="kb-key">R</button><button class="kb-key">T</button><button class="kb-key">Y</button><button class="kb-key">U</button><button class="kb-key">I</button><button class="kb-key">O</button><button class="kb-key">P</button>
             </div>
@@ -410,7 +451,6 @@
                     if (word.length >= 3 && word.length <= 6) { 
                         if (!/[AEIOUY]/.test(word)) return;
                         
-                        // 神級縮寫過濾器
                         if (/[^AEIOUY]{4}/.test(word)) return; 
                         if (word.length === 4 && /[^AEIOUY]{3}/.test(word) && !/(CH|SH|TH|GH|PH|CK|NG)/.test(word)) return; 
                         
@@ -607,6 +647,7 @@
             clearInterval(timerInterval); clearTimeout(idleTimer); isGameOver = true;
             document.getElementById('setup-screen').classList.add('active');
             document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('query-screen').classList.remove('active');
             document.getElementById('game-over').classList.remove('show');
             document.getElementById('pause-overlay').classList.remove('show');
             
@@ -616,7 +657,7 @@
             document.getElementById('pause-btn').style.display = 'none';
             document.getElementById('restart-btn').style.display = 'none'; 
 
-            document.getElementById('keyboard').style.display = 'flex';
+            document.getElementById('keyboard').style.display = 'none';
             
             const skipBtn = document.getElementById('skip-btn');
             skipBtn.textContent = "⏭️ 換個題目";
@@ -747,6 +788,7 @@
             generatePuzzle(); createBoard();
 
             document.getElementById('setup-screen').classList.remove('active');
+            document.getElementById('query-screen').classList.remove('active');
             document.getElementById('game-screen').classList.add('active');
 
             clearInterval(timerInterval);
@@ -764,6 +806,111 @@
                 }, 1000);
             }
         }
+
+        // --- 新增：字典查詢模式 ---
+        let queryLength = 4;
+        let queryPattern = ["", "", "", ""];
+        let queryActiveIndex = 0;
+
+        function startQueryMode() {
+            if(document.activeElement) document.activeElement.blur();
+            gameMode = 'query'; 
+            isGameOver = false;
+            
+            document.getElementById('setup-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('query-screen').classList.add('active');
+            
+            document.getElementById('settings-btn').style.display = 'none';
+            document.getElementById('keyboard').style.display = 'flex';
+            
+            queryLength = 4;
+            document.querySelectorAll('#query-len-selector .len-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('#query-len-selector .len-btn[data-len="4"]').classList.add('active');
+            
+            clearQuery();
+        }
+
+        function renderQueryBoard() {
+            const board = document.getElementById('query-board');
+            board.innerHTML = "";
+            for(let i=0; i<queryLength; i++) {
+                let t = document.createElement('div');
+                t.className = 'query-tile' + (i === queryActiveIndex ? ' active' : '');
+                t.textContent = queryPattern[i];
+                t.onclick = () => {
+                    queryActiveIndex = i;
+                    renderQueryBoard();
+                };
+                board.appendChild(t);
+            }
+        }
+
+        document.querySelectorAll('#query-len-selector .len-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#query-len-selector .len-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                queryLength = parseInt(e.target.getAttribute('data-len'));
+                clearQuery();
+            });
+        });
+
+        function clearQuery() {
+            queryPattern = new Array(queryLength).fill("");
+            queryActiveIndex = 0;
+            document.getElementById('query-results').innerHTML = "";
+            renderQueryBoard();
+        }
+
+        function execQuery() {
+            if(document.activeElement) document.activeElement.blur();
+            
+            let results = cloudDict[queryLength].filter(w => {
+                for(let i=0; i<queryLength; i++) {
+                    if(queryPattern[i] !== "" && w[i] !== queryPattern[i]) return false;
+                }
+                return true;
+            });
+            
+            const resContainer = document.getElementById('query-results');
+            resContainer.innerHTML = "";
+            
+            if (results.length === 0) {
+                resContainer.innerHTML = "<div style='text-align:center; color:var(--error-color); padding: 20px;'>找不到符合的單字</div>";
+                return;
+            }
+            
+            resContainer.innerHTML = `<div style='text-align:center; margin-bottom:10px; color:var(--wordle-yellow);'>找到 ${results.length} 個可能單字：</div>`;
+            
+            let resultFlex = document.createElement('div');
+            resultFlex.style.display = 'flex';
+            resultFlex.style.flexWrap = 'wrap';
+            resultFlex.style.gap = '10px';
+            resultFlex.style.justifyContent = 'center';
+            
+            results.forEach(w => {
+                let wordPill = document.createElement('div');
+                wordPill.style.backgroundColor = 'var(--panel-bg)';
+                wordPill.style.padding = '8px 12px';
+                wordPill.style.borderRadius = '6px';
+                wordPill.style.fontWeight = 'bold';
+                wordPill.style.border = '1px solid var(--border-color)';
+                wordPill.textContent = w;
+                
+                wordPill.style.cursor = 'pointer';
+                wordPill.onclick = async () => {
+                    wordPill.textContent = "翻譯中...";
+                    let trans = await getTranslation(w);
+                    wordPill.innerHTML = `${w} <span style="color:var(--wordle-yellow); font-size:0.85rem; margin-left:5px;">${trans.zh}</span>`;
+                };
+                
+                resultFlex.appendChild(wordPill);
+            });
+            
+            resContainer.appendChild(resultFlex);
+        }
+
+        // --- 結束新增 ---
 
         document.getElementById('hint-zh-btn').addEventListener('click', async () => {
             if(document.activeElement) document.activeElement.blur();
@@ -844,6 +991,24 @@
         });
 
         async function handleInput(e) {
+            // 新增：字典查詢模式的鍵盤攔截
+            if (gameMode === 'query' && document.getElementById('query-screen').classList.contains('active')) {
+                if (e.key === 'Enter') {
+                    if(e.preventDefault) e.preventDefault();
+                    execQuery();
+                } else if (e.key === 'Backspace') {
+                    if(e.preventDefault) e.preventDefault();
+                    queryPattern[queryActiveIndex] = "";
+                    if (queryActiveIndex > 0) queryActiveIndex--;
+                    renderQueryBoard();
+                } else if (/^[a-zA-Z]$/.test(e.key)) {
+                    queryPattern[queryActiveIndex] = e.key.toUpperCase();
+                    if (queryActiveIndex < queryLength - 1) queryActiveIndex++;
+                    renderQueryBoard();
+                }
+                return;
+            }
+
             if (isGameOver || isPaused || isAnimating || isChecking || !document.getElementById('game-screen').classList.contains('active')) return;
             
             if (e.key === 'Enter') {
@@ -954,8 +1119,6 @@
             
             addWordToHistory(word);
 
-            showFloatingAnim("+1", "var(--wordle-green)");
-            
             currentHintWord = null;
             revealedHints = {};
             document.getElementById('hint-btn').style.display = 'inline-block';
@@ -1053,9 +1216,8 @@
                 enDiv.className = 'en-def-box';
                 enDiv.textContent = resultObj.en;
                 
-                // 修改點：只需要按一次就能切換展開/收合
                 enLink.onclick = () => {
-                    enDiv.style.display = enDiv.style.display === 'block' ? 'none' : 'block';
+                    enDiv.style.display = enDiv.style.display === 'none' ? 'block' : 'none';
                 };
                 
                 actionGrp.appendChild(enLink);
